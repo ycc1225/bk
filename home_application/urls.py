@@ -26,7 +26,8 @@ urlpatterns = (
     url(r"host-detail", views.get_host_detail),
     url(r"search-file", views.search_file),
     url(r"backup-file", views.backup_file),
-    url(r"backup-record", views.get_backup_record),
+    url(r"backup-jobs", views.get_backup_jobs),
+    url(r"backup-job-detail", views.get_backup_job_detail),
 
 
 )

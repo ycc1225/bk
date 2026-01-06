@@ -19,7 +19,7 @@ from django.shortcuts import render
 from blueking.component.shortcuts import get_client_by_request
 from home_application.constants import MAX_ATTEMPTS, JOB_RESULT_ATTEMPTS_INTERVAL, JOB_BK_BIZ_ID, BK_JOB_HOST, \
     WEB_SUCCESS_CODE, SEARCH_FILE_PLAN_ID, WAITING_CODE, SUCCESS_CODE, BACKUP_FILE_PLAN_ID
-from home_application.models import BackupRecord
+from home_application.models import BackupRecord, BackupJob
 from home_application.utils import DataSyncManager
 
 
@@ -318,11 +318,12 @@ def backup_file(request):
     host_id_list = [int(bk_host_id) for bk_host_id in host_id_list_str.split(",")]
     search_path = request.GET.get("search_path")
     suffix = request.GET.get("suffix")
+    backup_path = request.GET.get("backup_path")
+
     kwargs = {
         "bk_scope_type": "biz",
         "bk_scope_id": JOB_BK_BIZ_ID,
         "job_plan_id": BACKUP_FILE_PLAN_ID,
-        # TODO 修改为你创建的执行方案的全局变量
         "global_var_list": [
             {
                 "name": "host_list",
@@ -340,7 +341,7 @@ def backup_file(request):
             },
             {
                 "name": "backup_path",
-                "value": request.GET.get("backup_path"),
+                "value": backup_path,
             },
         ],
     }
@@ -373,6 +374,28 @@ def backup_file(request):
 
     step_instance_id = step_instance_list[0].get("step_instance_id")
 
+    bk_job_link = "{}/biz/{}/execute/task/{}".format(
+        BK_JOB_HOST,
+        JOB_BK_BIZ_ID,
+        job_instance_id,
+    )
+
+    backup_job = BackupJob.objects.create(
+        job_instance_id=str(job_instance_id),
+        operator=request.user.username,
+        search_path=search_path,
+        suffix=suffix,
+        backup_path=backup_path,
+        bk_job_link=bk_job_link,
+        status="pending",  # 初始状态，后续根据文件记录更新
+        host_count=len(host_id_list),
+        file_count=0,  # 后续统计
+    )
+
+    total_files = 0
+    success_count = 0
+    failed_count = 0
+
     for bk_host_id in host_id_list:
         data = {
             "bk_scope_type": "biz",
@@ -387,34 +410,103 @@ def backup_file(request):
         step_res = response.get("log_content")
         json_step_res = json.loads(step_res)
 
-        for step_res in json_step_res:
+        for step_res_item in json_step_res:
             # 创建备份记录
-            step_res["bk_host_id"] = bk_host_id
-            step_res["bk_file_dir"] = search_path
-            step_res["bk_file_suffix"] = suffix
-            step_res["bk_file_operator"] = request.user.username
-            step_res["bk_job_link"] = "{}/biz/{}/execute/task/{}".format(
-                BK_JOB_HOST,
-                JOB_BK_BIZ_ID,
-                job_instance_id,
+            BackupRecord.objects.create(
+                backup_job=backup_job,
+                bk_host_id=bk_host_id,
+                file_path=step_res_item.get("file_path", ""),
+                file_size=step_res_item.get("file_size", ""),
+                status=step_res_item.get("status", "unknown")
             )
-            BackupRecord.objects.create(**step_res)
+
+            total_files += 1
+            if step_res_item.get("status") == "success":
+                success_count += 1
+            else:
+                failed_count += 1
+
+    # 更新备份作业的统计信息和状态
+    backup_job.file_count = total_files
+    if failed_count == 0:
+        backup_job.status = "success"
+    elif success_count == 0:
+        backup_job.status = "failed"
+    else:
+        backup_job.status = "partial"
+    backup_job.save()
 
     res_data = {
         "result": True,
-        "data": "success",
+        "data": {
+            "job_id": backup_job.id,
+            "message": "备份完成"
+        },
         "code": WEB_SUCCESS_CODE,
     }
     return JsonResponse(res_data)
 
-def get_backup_record(request):
+def get_backup_jobs(request):
     """
-    查询备份记录
+    获取备份作业列表
     """
+    page = int(request.GET.get("page", 1))
+    page_size = int(request.GET.get("page_size", 10))
+    start = (page - 1) * page_size
+
+    total_count = BackupJob.objects.count()
+    jobs = BackupJob.objects.all()[start:start + page_size]
+
     res_data = {
         "result": True,
-        "data": list(BackupRecord.objects.all().order_by("-id").values()),
-        "code": WEB_SUCCESS_CODE,
+        "data": list(jobs.values()),
+        "pagination": {
+            "count": total_count,
+            "current": page,
+            "page_size": page_size,
+        }
     }
     return JsonResponse(res_data)
+
+
+def get_backup_job_detail(request):
+    """
+    获取备份作业详情（包含所有主机和文件）
+    """
+    job_id = request.GET.get("job_id")
+
+    job = BackupJob.objects.get(id=job_id)
+    records = job.records.all()
+
+    # 按主机分组
+    from collections import defaultdict
+    host_files = defaultdict(list)
+    for record in records:
+        host_files[record.bk_host_id].append({
+            "file_path": record.file_path,
+            "file_size": record.file_size,
+            "status": record.status
+        })
+
+    res_data = {
+        "result": True,
+        "data": {
+            "job": {
+                "id": job.id,
+                "job_instance_id": job.job_instance_id,
+                "operator": job.operator,
+                "search_path": job.search_path,
+                "suffix": job.suffix,
+                "backup_path": job.backup_path,
+                "bk_job_link": job.bk_job_link,
+                "status": job.status,
+                "host_count": job.host_count,
+                "file_count": job.file_count,
+                "created_at": job.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            },
+            "host_files": dict(host_files)
+        }
+    }
+    return JsonResponse(res_data)
+
 

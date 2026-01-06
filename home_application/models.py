@@ -43,19 +43,31 @@ class ModuleInfo(models.Model):
     bk_biz_id = models.IntegerField()
 
 
-class BackupRecord(models.Model):
-    bk_host_id = models.IntegerField(verbose_name="主机ID")
-    bk_file_dir = models.CharField(verbose_name="备份目录", max_length=1024)
-    bk_file_suffix = models.CharField(verbose_name="文件名后缀", max_length=255)
-    bk_backup_name = models.CharField(verbose_name="备份文件名", max_length=1024)
-    bk_file_create_time = models.CharField(verbose_name="备份时间", max_length=30)
-    bk_file_operator = models.CharField(verbose_name="备份人", max_length=30)
-    bk_job_link = models.CharField(verbose_name="JOB结果", max_length=100)
+class BackupJob(models.Model):
+    job_instance_id = models.CharField(max_length=255, unique=True)  # 作业平台实例ID
+    operator = models.CharField(max_length=255)  # 操作人
+    search_path = models.TextField()  # 搜索路径
+    suffix = models.CharField(max_length=255)  # 文件后缀
+    backup_path = models.TextField()  # 备份路径
+    bk_job_link = models.TextField()  # 作业链接
+    status = models.CharField(max_length=50)  # 整体状态：success/failed/partial
+    host_count = models.IntegerField(default=0)  # 主机数量
+    file_count = models.IntegerField(default=0)  # 文件总数
+    created_at = models.DateTimeField(auto_now_add=True)  # 创建时间
 
     class Meta:
-        verbose_name = "备份记录"
-        verbose_name_plural = verbose_name
+        ordering = ['-id']
 
+# 从表：备份记录（主机+文件）
+class BackupRecord(models.Model):
+    backup_job = models.ForeignKey(BackupJob, on_delete=models.CASCADE, related_name='records')
+    bk_host_id = models.IntegerField()  # 主机ID
+    file_path = models.TextField()  # 文件路径
+    file_size = models.CharField(max_length=255, null=True, blank=True)  # 文件大小
+    status = models.CharField(max_length=50)  # 文件状态
+
+    class Meta:
+        ordering = ['-id']
 
 
 
