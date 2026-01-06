@@ -62,12 +62,9 @@ class BackupJob(models.Model):
 class BackupRecord(models.Model):
     backup_job = models.ForeignKey(BackupJob, on_delete=models.CASCADE, related_name='records')
     bk_host_id = models.IntegerField()  # 主机ID
-    file_path = models.TextField()  # 文件路径
-    file_size = models.CharField(max_length=255, null=True, blank=True)  # 文件大小
     status = models.CharField(max_length=50)  # 文件状态
+    bk_backup_name = models.CharField(max_length=1024)
 
     class Meta:
         ordering = ['-id']
-
-
 

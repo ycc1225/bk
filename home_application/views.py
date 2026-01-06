@@ -18,7 +18,7 @@ from django.shortcuts import render
 
 from blueking.component.shortcuts import get_client_by_request
 from home_application.constants import MAX_ATTEMPTS, JOB_RESULT_ATTEMPTS_INTERVAL, JOB_BK_BIZ_ID, BK_JOB_HOST, \
-    WEB_SUCCESS_CODE, SEARCH_FILE_PLAN_ID, WAITING_CODE, SUCCESS_CODE, BACKUP_FILE_PLAN_ID
+    WEB_SUCCESS_CODE, SEARCH_FILE_PLAN_ID, WAITING_CODE, SUCCESS_CODE, BACKUP_FILE_PLAN_ID, STEP_STATUS_SUCCESS
 from home_application.models import BackupRecord, BackupJob
 from home_application.utils import DataSyncManager
 
@@ -314,6 +314,7 @@ def backup_file(request):
     """
 
     # 注意：先在constants.py中替换BACKUP_FILE_PLAN_ID为你自己在作业平台上新建的方案的ID
+    global step_instance_list
     host_id_list_str = request.GET.get("host_id_list")
     host_id_list = [int(bk_host_id) for bk_host_id in host_id_list_str.split(",")]
     search_path = request.GET.get("search_path")
@@ -345,6 +346,7 @@ def backup_file(request):
             },
         ],
     }
+
 
     # 调用执行方案
     client = get_client_by_request(request)
@@ -410,30 +412,17 @@ def backup_file(request):
         step_res = response.get("log_content")
         json_step_res = json.loads(step_res)
 
-        for step_res_item in json_step_res:
-            # 创建备份记录
+        for step_res in json_step_res:
             BackupRecord.objects.create(
                 backup_job=backup_job,
                 bk_host_id=bk_host_id,
-                file_path=step_res_item.get("file_path", ""),
-                file_size=step_res_item.get("file_size", ""),
-                status=step_res_item.get("status", "unknown")
+                status="success",
+                bk_backup_name = step_res.get("bk_backup_name","unknown"),
             )
-
             total_files += 1
-            if step_res_item.get("status") == "success":
-                success_count += 1
-            else:
-                failed_count += 1
 
-    # 更新备份作业的统计信息和状态
     backup_job.file_count = total_files
-    if failed_count == 0:
-        backup_job.status = "success"
-    elif success_count == 0:
-        backup_job.status = "failed"
-    else:
-        backup_job.status = "partial"
+    backup_job.status = "success"
     backup_job.save()
 
     res_data = {
@@ -483,8 +472,7 @@ def get_backup_job_detail(request):
     host_files = defaultdict(list)
     for record in records:
         host_files[record.bk_host_id].append({
-            "file_path": record.file_path,
-            "file_size": record.file_size,
+            "file_path": record.bk_backup_name,
             "status": record.status
         })
 
