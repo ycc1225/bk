@@ -42,7 +42,6 @@ class RecordUserBehaviorMiddleware(MiddlewareMixin):
             api_category = 'CMDB' if api_name in CMDB_BEHAVIORS else 'JOB' if api_name in JOB_BEHAVIORS else 'Unknown'
 
             from home_application.tasks import record_api_request_task
-            print(hasattr(record_api_request_task, 'delay'))
             record_api_request_task.delay(username, api_category, api_name)
         except Exception as e:  # pylint: disable=broad-except
             # 这里即使产生了异常，也应该继续往后执行，因为埋点记录不应该影响用户请求接口，应该是静默的，所以建议学有余力的同学尝试进行异步优化
