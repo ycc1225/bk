@@ -28,6 +28,7 @@ urlpatterns = (
     url(r"backup-file", views.backup_file),
     url(r"backup-jobs", views.get_backup_jobs),
     url(r"backup-job-detail", views.get_backup_job_detail),
+    url(r"sync", views.sync),
 
 
 )
