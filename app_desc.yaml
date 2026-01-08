@@ -11,8 +11,8 @@ module:
               name: bk/http
             targetPort: 5000
             port: 80
-#      - name: beat
-#        procCommand: python manage.py celery beat -l info
+      - name: beat
+        procCommand: python manage.py celery beat -l info
       - name: worker
         procCommand: python manage.py celery worker -l info
     hooks:
