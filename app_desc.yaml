@@ -1,8 +1,20 @@
-spec_version: 2
+specVersion: 3
 module:
   language: Python
-  scripts:
-    pre_release_hook: "python manage.py migrate --no-input"
-  processes:
-    web:
-      command: gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile - --access-logformat '[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"'
+  spec:
+    processes:
+      - name: web
+        procCommand: gunicorn wsgi -w 4 -b [::]:5000 --access-logfile - --error-logfile - --access-logformat '[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"'
+        services:
+          - name: web
+            exposedType:
+              name: bk/http
+            targetPort: 5000
+            port: 80
+#      - name: beat
+#        procCommand: python manage.py celery beat -l info
+      - name: worker
+        procCommand: python manage.py celery worker -l info
+    hooks:
+      preRelease:
+        procCommand: "python manage.py migrate --no-input"
