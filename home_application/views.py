@@ -120,8 +120,8 @@ def sync(request):
             if not module_sync_result.get("result"):
                 return module_sync_result
     else:
-        from home_application.tasks import sync_data_task
-        return sync_data_task.delay()
+        from home_application.tasks import sync_data
+        return sync_data.delay()
     return JsonResponse({"result": True, "message": "同步成功","data":{}})
 
 

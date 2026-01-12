@@ -49,7 +49,7 @@ def record_api_request_task(username, api_category, api_name):
 
 
 @shared_task
-def sync_data_task():
+def sync_data():
     """
     异步同步数据
     """
