@@ -137,17 +137,17 @@ class DataSyncManager:
                                         {'bk_biz_id': bk_biz_id, 'bk_set_id': bk_set_id})
 
     @staticmethod
-    def sync_data(request, sync_type=None, bk_biz_id=None, bk_set_id=None):
+    def sync_data(client, sync_type=None, bk_biz_id=None, bk_set_id=None):
         """
         统一的数据同步接口
 
         Args:
-            request: Django请求对象
+            client: Django请求对象
             sync_type: 同步类型 (biz/set/module/all)
             bk_biz_id: 业务ID
             bk_set_id: 集群ID
         """
-        client = get_client_by_request(request)
+
 
         # 确定需要同步的数据类型
         sync_types = []

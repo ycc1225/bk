@@ -105,23 +105,23 @@ def sync(request):
 
     # 根据提供的参数同步相应的数据
     # 同步业务数据
-    biz_sync_result = DataSyncManager.sync_data(request, 'biz')
+    client = get_client_by_request(request)
+    biz_sync_result = DataSyncManager.sync_data(client, 'biz')
     if not biz_sync_result.get("result"):
         return biz_sync_result
     if bk_biz_id:
         # 同步集群数据
-        set_sync_result = DataSyncManager.sync_data(request, 'set', bk_biz_id)
+        set_sync_result = DataSyncManager.sync_data(client, 'set', bk_biz_id)
         if not set_sync_result.get("result"):
             return set_sync_result
         if bk_set_id:
             # 同步模块数据
-            module_sync_result = DataSyncManager.sync_data(request, 'module', bk_biz_id, bk_set_id)
+            module_sync_result = DataSyncManager.sync_data(client, 'module', bk_biz_id, bk_set_id)
             if not module_sync_result.get("result"):
                 return module_sync_result
     else:
-        all_sync_result = DataSyncManager.sync_data(request, 'all')
-        if not all_sync_result.get("result"):
-            return all_sync_result
+        from home_application.tasks import sync_data_task
+        return sync_data_task.delay()
     return JsonResponse({"result": True, "message": "同步成功","data":{}})
 
 
