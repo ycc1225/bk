@@ -2,9 +2,12 @@
 """
 数据同步工具类
 """
+import json
+from typing import Any, Dict
 
-from django.http import JsonResponse
 from django.db import transaction
+from django.http import JsonResponse
+
 from blueking.component.shortcuts import get_client_by_request
 from home_application.models import BizInfo, SetInfo, ModuleInfo
 
@@ -151,9 +154,7 @@ class DataSyncManager:
 
         # 确定需要同步的数据类型
         sync_types = []
-        if sync_type == "all":
-            sync_types = ["biz", "set", "module"]
-        elif sync_type in ["biz", "set", "module"]:
+        if sync_type in ["biz", "set", "module"]:
             sync_types = [sync_type]
         else:
             return {"result": False, "message": "不支持的同步类型"}
@@ -198,3 +199,175 @@ class DataSyncManager:
                 "result": False,
                 "message": f"数据同步失败: {str(e)}"
             }
+
+    @staticmethod
+    def _call_cmdb_api(url: str, headers: Dict[str, str], data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        通过HTTP请求调用CMDB API
+
+        Args:
+            url: API地址
+            headers: 请求头
+            data: 请求体
+
+        Returns:
+            API响应数据
+
+        Raises:
+            Exception: 当API调用失败时
+        """
+        import requests
+        import logging
+        logger = logging.getLogger("celery")
+
+        try:
+            response = requests.request("post",url, headers=headers, data=data)
+            
+            if response.status_code != 200:
+                error_msg = f"CMDB API调用失败: {response.status_code} - {response.text}"
+                logger.error(error_msg)
+                raise Exception(error_msg)
+
+            result = response.json()
+            
+            if result.get('result', False) is False:
+                error_msg = result.get('message', '未知错误')
+                logger.error(f"CMDB API返回错误: {error_msg}")
+                raise Exception(error_msg)
+
+            return result
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"CMDB API请求异常: {str(e)}")
+            raise Exception(f"网络请求失败: {str(e)}")
+
+    @staticmethod
+    def sync_all_data(auth_header: Dict[str, str]) -> Dict[str, Any]:
+        """
+        同步所有CMDB数据（业务、集群、模块）到数据库
+        通过HTTP请求直接调用CMDB API，不使用BK SDK的client
+
+        Args:
+            auth_header: 认证请求头，包含 BK-APP-CODE 和 BK-APP-SECRET 等信息
+
+        Returns:
+            同步结果字典
+            {
+                "result": True/False,
+                "message": "同步成功/失败",
+                "data": {
+                    "biz_count": 业务数量,
+                    "set_count": 集群数量,
+                    "module_count": 模块数量
+                }
+            }
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # CMDB API基础URL
+        base_url = "https://bkapi.ce.bktencent.com/api/bk-cmdb/prod/api/v3"
+        bk_supplier_account = "0"
+        headers = {"X-Bkapi-Authorization": json.dumps(auth_header)}
+
+        stats = {
+            "biz_count": 0,
+            "set_count": 0,
+            "module_count": 0
+        }
+
+        try:
+            with transaction.atomic():
+                # 1. 同步业务数据
+                logger.info("开始同步业务数据...")
+                biz_url = f"{base_url}/biz/search/{bk_supplier_account}"
+                biz_result = DataSyncManager._call_cmdb_api(
+                    biz_url,
+                    headers,
+                    {}
+                )
+
+                biz_list = biz_result.get('data', {}).get('info', [])
+                if biz_list:
+                    DataSyncManager._save_data_to_db(
+                        BizInfo,
+                        biz_list,
+                        'bk_biz_id',
+                        {'bk_biz_name': 'bk_biz_name'}
+                    )
+                    stats["biz_count"] = len(biz_list)
+                    logger.info(f"业务数据同步完成，共 {stats['biz_count']} 条")
+
+                # 2. 同步集群和模块数据
+                for biz in biz_list:
+                    bk_biz_id = biz.get('bk_biz_id')
+                    if bk_biz_id is None:
+                        continue
+
+                    logger.info(f"开始同步业务 {bk_biz_id} 的集群和模块数据...")
+
+                    # 获取集群列表
+                    set_url = f"{base_url}/set/search/{bk_supplier_account}/{bk_biz_id}"
+                    set_result = DataSyncManager._call_cmdb_api(
+                        set_url,
+                        headers,
+                        {}
+                    )
+
+                    set_list = set_result.get('data', {}).get('info', [])
+                    if set_list:
+                        DataSyncManager._save_data_to_db(
+                            SetInfo,
+                            set_list,
+                            'bk_set_id',
+                            {
+                                'bk_set_name': 'bk_set_name',
+                                'bk_biz_id': 'bk_biz_id'
+                            }
+                        )
+                        stats["set_count"] += len(set_list)
+
+                    # 获取每个集群的模块列表
+                    for bk_set in set_list:
+                        bk_set_id = bk_set.get('bk_set_id')
+                        if bk_set_id is None:
+                            continue
+
+                        module_url = f"{base_url}/module/search/{bk_supplier_account}/{bk_biz_id}/{bk_set_id}"
+                        module_result = DataSyncManager._call_cmdb_api(
+                            module_url,
+                            headers,
+                            {}
+                        )
+
+                        module_list = module_result.get('data', {}).get('info', [])
+                        if module_list:
+                            DataSyncManager._save_data_to_db(
+                                ModuleInfo,
+                                module_list,
+                                'bk_module_id',
+                                {
+                                    'bk_module_name': 'bk_module_name',
+                                    'bk_set_id': 'bk_set_id',
+                                    'bk_biz_id': 'bk_biz_id'
+                                }
+                            )
+                            stats["module_count"] += len(module_list)
+
+                    logger.info(f"业务 {bk_biz_id} 数据同步完成：集群 {len(set_list)} 个，模块 {sum(len(m.get('data', {}).get('info', [])) for m in [])} 个")
+
+            return {
+                "result": True,
+                "message": "全量数据同步成功",
+                "data": stats
+            }
+
+        except Exception as e:
+            logger.exception(f"全量数据同步失败: {str(e)}")
+            return {
+                "result": False,
+                "message": f"全量数据同步失败: {str(e)}",
+                "data": stats
+            }
+
+

@@ -3,10 +3,8 @@
 Celery 异步任务定义
 """
 import logging
-import requests
-import json
+import os
 
-from blueapps.account.components import bk_token
 from celery import shared_task
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -61,25 +59,13 @@ def sync_data():
 
     try:
         # 同步数据
-        username = "25zhujiao1"
-        try:
-            user = User.objects.get(username=username)
-        except ObjectDoesNotExist:
-            user = User.objects.first()
-            if not user:
-                return {"result": False, "message": "用户不存在"}
-            logger.info(f"用户不存在，使用第一个用户: {user.username}")
-        client = get_client_by_user(user)
-        all_sync_result = DataSyncManager.sync_all_data(client,sync_type="all")
-        if not all_sync_result.get("result"):
-            logger.info(f"同步数据成功")
-            biz_count = BizInfo.objects.count()
-            set_count = SetInfo.objects.count()
-            module_count = ModuleInfo.objects.count()
-            logger.info(f"同步数据成功，业务数={biz_count}, 集群数={set_count}, 模块数={module_count}")
-        else:
-            logger.error(f"同步数据失败: {all_sync_result.get('message')}")
-        return all_sync_result
+        auth_header = {
+            "bk_username": "25zhujiao1",
+            "bk_app_code": os.getenv("BKPAAS_APP_ID"),
+            "bk_app_secret": os.getenv("BKPAAS_APP_SECRET"),
+        }
+        DataSyncManager.sync_all_data(auth_header)
+        logger.info("成功同步数据")
     except Exception as e:
         logger.error(f"异步同步数据失败: {str(e)}")
-        return {"result": False, "message": str(e)}
+        pass

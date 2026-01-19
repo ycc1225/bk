@@ -155,8 +155,7 @@ class DataSyncAPIView(APIView):
         
         return Response({
             "result": True,
-            "message": "同步成功",
-            "data": {}
+            "message": "同步成功"
         })
 
 
