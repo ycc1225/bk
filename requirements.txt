@@ -15,6 +15,7 @@ django-celery-results==2.5.1
 django-cors-headers==4.2.0
 djangorestframework==3.14.0
 drf-yasg==1.21.7
+django-filter==23.5
 
 # jwt
 pyCryptodome==3.23.0

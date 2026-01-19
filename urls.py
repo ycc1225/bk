@@ -24,4 +24,6 @@ urlpatterns = [
     # 这里的 mako_application 可以改成你想要的名字
     url(r"^mako/", include("mako_application.urls")),
     url(r"^i18n/", include("django.conf.urls.i18n")),
+    # DRF API 路由
+    url(r"^api/", include("home_application.api_urls")),
 ]

@@ -61,6 +61,9 @@ from blueapps.conf.log import get_logging_config_dict
 # 请在这里加入你的自定义 APP
 INSTALLED_APPS += (  # noqa
     "corsheaders",          # 添加这一行，解决CORS跨域资源共享问题
+    "rest_framework",       # Django REST Framework
+    "django_filters",       # Django REST Framework 过滤器
+    "drf_yasg",             # Swagger API 文档生成工具
     "home_application",
     "mako_application",
 )

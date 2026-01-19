@@ -2,9 +2,13 @@
 """
 Celery 异步任务定义
 """
-import datetime
 import logging
+import requests
+import json
+
+from blueapps.account.components import bk_token
 from celery import shared_task
+from django.core.exceptions import ObjectDoesNotExist
 
 from blueking.component.shortcuts import get_client_by_user
 from home_application.models import ApiRequestCount, BizInfo, SetInfo, ModuleInfo
@@ -60,7 +64,7 @@ def sync_data():
         username = "25zhujiao1"
         try:
             user = User.objects.get(username=username)
-        except User.DoesNotExist:
+        except ObjectDoesNotExist:
             user = User.objects.first()
             if not user:
                 return {"result": False, "message": "用户不存在"}

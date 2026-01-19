@@ -187,8 +187,6 @@ def get_hosts_list(request):
             "rules": rules
         }
 
-    print(kwargs)
-
     result = client.cc.list_biz_hosts(kwargs)
 
     # 在返回结果中添加分页信息
@@ -229,7 +227,12 @@ def search_file(request):
 
     # 注意：先在constants.py中替换SEARCH_FILE_PLAN_ID为你自己在作业平台上新建的方案的ID
     host_id_list_str = request.GET.get("host_id_list")
-    host_id_list = [int(bk_host_id) for bk_host_id in host_id_list_str.split(",")]
+    host_id_list = []
+    for bk_host_id in host_id_list_str.split(","):
+        host_id = int(bk_host_id)
+        # 过滤出865-869的主机
+        if 865 <= host_id <= 869:
+            host_id_list.append(host_id)
     kwargs = {
         "bk_scope_type": "biz",
         "bk_scope_id": JOB_BK_BIZ_ID,
@@ -316,7 +319,12 @@ def backup_file(request):
     # 注意：先在constants.py中替换BACKUP_FILE_PLAN_ID为你自己在作业平台上新建的方案的ID
     global step_instance_list
     host_id_list_str = request.GET.get("host_id_list")
-    host_id_list = [int(bk_host_id) for bk_host_id in host_id_list_str.split(",")]
+    host_id_list = []
+    for bk_host_id in host_id_list_str.split(","):
+        host_id = int(bk_host_id)
+        # 过滤出865-869的主机
+        if 865 <= host_id <= 869:
+            host_id_list.append(host_id)
     search_path = request.GET.get("search_path")
     suffix = request.GET.get("suffix")
     backup_path = request.GET.get("backup_path")
