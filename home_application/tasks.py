@@ -6,9 +6,7 @@ import logging
 import os
 
 from celery import shared_task
-from django.core.exceptions import ObjectDoesNotExist
 
-from blueking.component.shortcuts import get_client_by_user
 from home_application.models import ApiRequestCount
 
 logger = logging.getLogger(__name__)

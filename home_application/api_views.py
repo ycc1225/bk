@@ -465,8 +465,7 @@ class BackupFileAPIView(APIView):
             "data": serializer.data,
             "code": WEB_SUCCESS_CODE,
         })
-@login_exempt
-@csrf_exempt
+
 class BackupJobCallbackAPIView(APIView):
     """备份作业回调API"""
     def post(self, request):

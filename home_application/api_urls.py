@@ -2,7 +2,7 @@
 """
 DRF API URL路由配置
 """
-
+from blueapps.account.decorators import login_exempt
 from django.urls import path
 
 from .api_views import (
@@ -39,5 +39,5 @@ urlpatterns = [
     path('backup-job-detail/<int:pk>/', BackupJobDetailAPIView.as_view(), name='api-backup-job-detail'),
     
     # 回调
-    path('backup-callback/', BackupJobCallbackAPIView.as_view(), name='api-backup-callback'),
+    path('backup-callback/', login_exempt(BackupJobCallbackAPIView.as_view()), name='api-backup-callback'),
 ]
