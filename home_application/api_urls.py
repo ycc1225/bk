@@ -2,13 +2,15 @@
 """
 DRF API URL路由配置
 """
+import os
+
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 from .api_views import (
     BizInfoViewSet, SetInfoViewSet, ModuleInfoViewSet,
     BackupJobViewSet, DataSyncAPIView, HostListAPIView, HostDetailAPIView,
-    SearchFileAPIView, BackupFileAPIView
+    SearchFileAPIView, BackupFileAPIView, BackupJobCallbackAPIView
 )
 from .swagger_config import schema_view
 
@@ -18,7 +20,6 @@ router.register(r'biz-info', BizInfoViewSet, basename='biz-info')
 router.register(r'set-info', SetInfoViewSet, basename='set-info')
 router.register(r'module-info', ModuleInfoViewSet, basename='module-info')
 router.register(r'backup-jobs', BackupJobViewSet, basename='backup-jobs')
-# router.register(r'api-stats', ApiRequestCountViewSet, basename='api-stats')
 
 # API视图路由
 urlpatterns = [
@@ -39,4 +40,7 @@ urlpatterns = [
     
     # ViewSet路由
     path('', include(router.urls)),
+
+    # 回调
+    path('backup-callback/', BackupJobCallbackAPIView.as_view(), name='api-backup-callback'),
 ]

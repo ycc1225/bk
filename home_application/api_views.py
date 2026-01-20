@@ -437,3 +437,10 @@ class BackupFileAPIView(APIView):
             "data": serializer.data,
             "code": WEB_SUCCESS_CODE,
         })
+
+class BackupJobCallbackAPIView(APIView):
+    """备份作业回调API"""
+    def post(self, request):
+        """回调成功返回200"""
+        print(request.data)
+        return Response(status=status.HTTP_200_OK)
