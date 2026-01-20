@@ -444,9 +444,6 @@ class BackupFileAPIView(APIView):
             bk_token=bk_token,  # 使用 bk_token
             operator=request.user.username,  # 只用于记录操作者
             host_id_list=host_id_list,
-            search_path=search_path,
-            suffix=suffix,
-            backup_path=backup_path,
         )
 
         # 立即返回，不阻塞等待作业完成
@@ -503,7 +500,7 @@ class BackupJobCallbackAPIView(APIView):
                 
                 logger.info(
                     f"回调更新作业状态: job_instance_id={job_instance_id}, "
-                    f"old_status={new_status}, new_status={new_status}"
+                    f"new_status={new_status}"
                 )
             else:
                 logger.info(

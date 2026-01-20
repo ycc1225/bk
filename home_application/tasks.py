@@ -82,7 +82,7 @@ def sync_data():
 
 
 @shared_task(bind=True, max_retries=3)
-def process_backup_job_task(self, job_instance_id, bk_token, operator, host_id_list, search_path, suffix, backup_path):
+def process_backup_job_task(self, job_instance_id, bk_token, operator, host_id_list):
     """
     异步处理备份作业：轮询作业状态，完成后获取日志并创建备份记录
 
@@ -91,9 +91,6 @@ def process_backup_job_task(self, job_instance_id, bk_token, operator, host_id_l
         bk_token (str): 用户认证 token
         operator (str): 操作者（仅用于记录）
         host_id_list (list): 主机ID列表
-        search_path (str): 搜索路径
-        suffix (str): 文件后缀
-        backup_path (str): 备份路径
 
     Returns:
         dict: 处理结果
@@ -104,13 +101,6 @@ def process_backup_job_task(self, job_instance_id, bk_token, operator, host_id_l
     )
     from blueking.component import client as component_client
     from blueking.component import conf
-
-    # 使用 bk_token 创建 client
-    client = component_client.ComponentClient(
-        app_code=conf.APP_CODE,
-        app_secret=conf.SECRET_KEY,
-        common_args={"bk_token": bk_token}
-    )
     
     logger.info(f"开始异步处理备份作业: job_instance_id={job_instance_id}, operator={operator}")
     
@@ -125,7 +115,7 @@ def process_backup_job_task(self, job_instance_id, bk_token, operator, host_id_l
         }
 
     # 如果作业已经处理完成，直接返回
-    if backup_job.status in ["success", "failed"]:
+    if backup_job.status in ["success", "failed"] and backup_job.file_count > 0:
         logger.info(f"备份作业已处理完成: job_instance_id={job_instance_id}, status={backup_job.status}")
         return {
             "result": True,
@@ -135,6 +125,7 @@ def process_backup_job_task(self, job_instance_id, bk_token, operator, host_id_l
     # 1. 轮询作业执行状态
     attempts = 0
     step_instance_id = None
+    client = component_client.ComponentClient(conf.APP_CODE,conf.SECRET_KEY,common_args={"bk_token": bk_token})
 
     logger.info(f"开始轮询作业状态: job_instance_id={job_instance_id}")
 
@@ -168,6 +159,7 @@ def process_backup_job_task(self, job_instance_id, bk_token, operator, host_id_l
                 return None
             else:
                 step_instance_id = step_instance_list[0].get("step_instance_id")
+                break
         except Exception as e:
             logger.error(f"查询作业状态异常: job_instance_id={job_instance_id}, error={str(e)}")
             time.sleep(JOB_RESULT_ATTEMPTS_INTERVAL)
