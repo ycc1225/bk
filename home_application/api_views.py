@@ -3,6 +3,7 @@
 DRF 视图定义 - 使用REST API风格重构接口
 """
 import json
+import logging
 import time
 from collections import defaultdict
 
@@ -25,6 +26,8 @@ from .constants import (
 )
 from .utils import DataSyncManager
 from .cmdb_repository import CmdbRepository, CmdbFetchStrategy
+
+logger = logging.getLogger(__name__)
 
 
 # ============ 业务、集群、模块数据API ============
@@ -465,5 +468,5 @@ class BackupJobCallbackAPIView(APIView):
     """备份作业回调API"""
     def post(self, request):
         """回调成功返回200"""
-        print(request.data)
+        logger.info("BackupJobCallbackAPIView: {}".format(request.data))
         return Response(status=status.HTTP_200_OK)
