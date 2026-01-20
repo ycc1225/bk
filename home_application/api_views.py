@@ -7,7 +7,9 @@ import logging
 import time
 from collections import defaultdict
 
+from blueapps.account.decorators import login_exempt
 from django.urls import path, reverse
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -463,11 +465,9 @@ class BackupFileAPIView(APIView):
             "data": serializer.data,
             "code": WEB_SUCCESS_CODE,
         })
-
+@login_exempt
+@csrf_exempt
 class BackupJobCallbackAPIView(APIView):
-    def get(self,request):
-        logger.info("BackupJobCallbackAPIViewGet: {}".format(request.data))
-        return Response(status=status.HTTP_200_OK)
     """备份作业回调API"""
     def post(self, request):
         """回调成功返回200"""
