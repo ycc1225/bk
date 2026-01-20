@@ -7,8 +7,7 @@ from rest_framework.routers import DefaultRouter
 
 from .api_views import (
     BizInfoViewSet, SetInfoViewSet, ModuleInfoViewSet,
-    BackupJobViewSet, ApiRequestCountViewSet,
-    DataSyncAPIView, HostListAPIView, HostDetailAPIView,
+    BackupJobViewSet, DataSyncAPIView, HostListAPIView, HostDetailAPIView,
     SearchFileAPIView, BackupFileAPIView
 )
 from .swagger_config import schema_view
@@ -19,7 +18,7 @@ router.register(r'biz-info', BizInfoViewSet, basename='biz-info')
 router.register(r'set-info', SetInfoViewSet, basename='set-info')
 router.register(r'module-info', ModuleInfoViewSet, basename='module-info')
 router.register(r'backup-jobs', BackupJobViewSet, basename='backup-jobs')
-router.register(r'api-stats', ApiRequestCountViewSet, basename='api-stats')
+# router.register(r'api-stats', ApiRequestCountViewSet, basename='api-stats')
 
 # API视图路由
 urlpatterns = [

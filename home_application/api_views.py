@@ -110,19 +110,6 @@ class BackupJobViewSet(viewsets.ModelViewSet):
             "data": data
         })
 
-
-class ApiRequestCountViewSet(viewsets.ReadOnlyModelViewSet):
-    """API请求次数视图集"""
-    queryset = ApiRequestCount.objects.all()
-    serializer_class = ApiRequestCountSerializer
-    pagination_class = StandardResultsSetPagination
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['api_category']
-    search_fields = ['api_name', 'api_category']
-    ordering_fields = ['id', 'request_count']
-    ordering = ['-request_count']
-
-
 class DataSyncAPIView(APIView):
     """数据同步API"""
     
