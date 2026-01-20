@@ -7,6 +7,7 @@ import time
 from collections import defaultdict
 
 from django.db.models import F
+from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status, viewsets, filters
 from rest_framework.decorators import action
@@ -354,6 +355,7 @@ class BackupFileAPIView(APIView):
                     "value": backup_path,
                 },
             ],
+            "callback_url": request.build_absolute_uri(reverse('api-backup-callback'))
         }
 
         client = get_client_by_request(request)
