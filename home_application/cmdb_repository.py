@@ -143,7 +143,7 @@ class CmdbRepository:
             包含认证信息的client对象
         """
         try:
-            from blueapps.account.utils import get_client_by_request
+            from blueking.component.shortcuts import get_client_by_request
             client = get_client_by_request(request)
             logger.info(f"通过request获取client成功: {client}")
             return client
