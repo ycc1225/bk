@@ -37,8 +37,12 @@ class RecordUserBehaviorMiddleware(MiddlewareMixin):
         try:
             # 获取需要埋点存储的信息：用户名、请求的API名称、请求的API所属的类别（CMDB/JOB）
             username = request.user.username
-            # 可以观察一下这里的request.path 数据格式为 xxxx/xxxx/实际API名称，因此我们使用split方法，以/进行分割，只取最后的API名称部分
-            api_name = request.path.split('/')[-1]
+
+            # 路径格式：/api/biz-list/ -> 去除首尾斜杠后分割取最后一个部分
+            # 例如：/api/biz-list/ -> biz-list, /api/set-list/ -> set-list
+            path_clean = request.path.rstrip('/')
+            api_name = path_clean.split('/')[-1] if path_clean else ''
+
             # 判断接口所属类别
             api_category = 'CMDB' if api_name in CMDB_BEHAVIORS else 'JOB' if api_name in JOB_BEHAVIORS else 'Unknown'
 
