@@ -378,7 +378,7 @@ class BackupFileAPIView(APIView):
                     "value": backup_path,
                 },
             ],
-            "callback_url": request.build_absolute_uri(reverse('api-backup-callback'))
+            "callback_url": "https://apps1.ce.bktencent.com/prod--default--leve4-bkvision/api/backup-callback/"
         }
 
         client = get_client_by_request(request)
@@ -465,8 +465,11 @@ class BackupFileAPIView(APIView):
         })
 
 class BackupJobCallbackAPIView(APIView):
+    def get(self,request):
+        logger.info("BackupJobCallbackAPIViewGet: {}".format(request.data))
+        return Response(status=status.HTTP_200_OK)
     """备份作业回调API"""
     def post(self, request):
         """回调成功返回200"""
-        logger.info("BackupJobCallbackAPIView: {}".format(request.data))
+        logger.info("BackupJobCallbackAPIViewPost: {}".format(request.data))
         return Response(status=status.HTTP_200_OK)
