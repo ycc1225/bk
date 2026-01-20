@@ -144,92 +144,6 @@ class BackupJobDetailAPIView(APIView):
             }
         }
         return Response(res_data)
-    
-    def put(self, request, pk):
-        """更新备份作业"""
-        try:
-            job = BackupJob.objects.get(pk=pk)
-        except BackupJob.DoesNotExist:
-            return Response({
-                "result": False,
-                "message": "备份作业不存在"
-            }, status=status.HTTP_404_NOT_FOUND)
-        
-        serializer = BackupJobSerializer(job, data=request.data, partial=True)
-        if serializer.is_valid():
-            job = serializer.save()
-            res_data = {
-                "result": True,
-                "data": {
-                    "id": job.id,
-                    "job_instance_id": job.job_instance_id,
-                    "operator": job.operator,
-                    "search_path": job.search_path,
-                    "suffix": job.suffix,
-                    "backup_path": job.backup_path,
-                    "bk_job_link": job.bk_job_link,
-                    "status": job.status,
-                    "host_count": job.host_count,
-                    "file_count": job.file_count,
-                    "created_at": job.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                }
-            }
-            return Response(res_data)
-        
-        return Response({
-            "result": False,
-            "message": str(serializer.errors)
-        }, status=status.HTTP_400_BAD_REQUEST)
-    
-    def delete(self, request, pk):
-        """删除备份作业"""
-        try:
-            job = BackupJob.objects.get(pk=pk)
-        except BackupJob.DoesNotExist:
-            return Response({
-                "result": False,
-                "message": "备份作业不存在"
-            }, status=status.HTTP_404_NOT_FOUND)
-        
-        job.delete()
-        return Response({
-            "result": True,
-            "message": "删除成功"
-        })
-
-
-class BackupJobCreateAPIView(APIView):
-    """创建备份作业API"""
-    
-    def post(self, request):
-        """创建备份作业"""
-        serializer = BackupJobSerializer(data=request.data)
-        if serializer.is_valid():
-            job = serializer.save()
-            # 返回创建的作业数据，按照原格式
-            res_data = {
-                "result": True,
-                "data": {
-                    "id": job.id,
-                    "job_instance_id": job.job_instance_id,
-                    "operator": job.operator,
-                    "search_path": job.search_path,
-                    "suffix": job.suffix,
-                    "backup_path": job.backup_path,
-                    "bk_job_link": job.bk_job_link,
-                    "status": job.status,
-                    "host_count": job.host_count,
-                    "file_count": job.file_count,
-                    "created_at": job.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                }
-            }
-            return Response(res_data, status=status.HTTP_201_CREATED)
-        
-        res_data = {
-            "result": False,
-            "message": str(serializer.errors)
-        }
-        return Response(res_data, status=status.HTTP_400_BAD_REQUEST)
 
 
 # ============ 数据同步API ============
@@ -525,6 +439,15 @@ class BackupFileAPIView(APIView):
             response = client.jobv3.get_job_instance_ip_log(**data).get("data")
             step_res = response.get("log_content")
             json_step_res = json.loads(step_res)
+
+            for step_res in json_step_res:
+                BackupRecord.objects.create(
+                    backup_job=backup_job,
+                    bk_host_id=bk_host_id,
+                    status="success",
+                    bk_backup_name = step_res.get("bk_backup_name","unknown"),
+                )
+                total_files += 1
 
 
         backup_job.file_count = total_files

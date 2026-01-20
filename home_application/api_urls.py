@@ -2,14 +2,12 @@
 """
 DRF API URL路由配置
 """
-import os
 
 from django.urls import path
 
 from .api_views import (
     BizInfoAPIView, SetInfoAPIView, ModuleInfoAPIView,
-    BackupJobListAPIView, BackupJobDetailAPIView, BackupJobCreateAPIView,
-    DataSyncAPIView, HostListAPIView, HostDetailAPIView,
+    BackupJobListAPIView, BackupJobDetailAPIView, DataSyncAPIView, HostListAPIView, HostDetailAPIView,
     SearchFileAPIView, BackupFileAPIView, BackupJobCallbackAPIView
 )
 from .swagger_config import schema_view
