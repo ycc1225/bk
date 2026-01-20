@@ -9,8 +9,7 @@ from celery import shared_task
 from django.core.exceptions import ObjectDoesNotExist
 
 from blueking.component.shortcuts import get_client_by_user
-from home_application.models import ApiRequestCount, BizInfo, SetInfo, ModuleInfo
-from home_application.utils import DataSyncManager
+from home_application.models import ApiRequestCount
 
 logger = logging.getLogger(__name__)
 
@@ -55,17 +54,28 @@ def sync_data():
     """
     异步同步数据
     """
-    from blueapps.account.models import User
+    from home_application.cmdb_repository import CmdbRepository
 
     try:
-        # 同步数据
+        # 构建认证信息
         auth_header = {
             "bk_username": "25zhujiao1",
             "bk_app_code": os.getenv("BKPAAS_APP_ID"),
             "bk_app_secret": os.getenv("BKPAAS_APP_SECRET"),
         }
-        DataSyncManager.sync_all_data(auth_header)
-        logger.info("成功同步数据")
+
+        # 使用CmdbRepository同步数据（定时任务模式）
+        cmdb_repo = CmdbRepository(auth=auth_header)
+        result = cmdb_repo.sync_all_data()
+
+        if result['result']:
+            logger.info(
+                f"成功同步数据: 业务{result['data']['biz_count']}个, "
+                f"集群{result['data']['set_count']}个, "
+                f"模块{result['data']['module_count']}个"
+            )
+        else:
+            logger.error(f"同步数据失败: {result['message']}")
     except Exception as e:
         logger.error(f"异步同步数据失败: {str(e)}")
         pass

@@ -16,14 +16,15 @@ CMDB_BEHAVIORS = [
     'set-list',
     'module-list',
     'host-list',
-    'host-detail'
+    'host-detail',
+    'sync'
 ]
 
 JOB_BEHAVIORS = [
     'search-file',
     'backup-file',
     'backup-jobs',
-    'backup-job-detail'
+    'backup-callback',
 ]
 
 

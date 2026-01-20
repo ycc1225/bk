@@ -6,15 +6,10 @@ import json
 import time
 from collections import defaultdict
 
-from django.db.models import F
-from django.urls import reverse
-from django.utils import timezone
-from rest_framework import status, viewsets, filters
-from rest_framework.decorators import action
-from rest_framework.response import Response
+from django.urls import path, reverse
 from rest_framework.views import APIView
-from rest_framework.pagination import PageNumberPagination
-from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.response import Response
+from rest_framework import status
 
 from blueking.component.shortcuts import get_client_by_request
 from .models import BizInfo, SetInfo, ModuleInfo, BackupJob, BackupRecord, ApiRequestCount
@@ -29,123 +24,232 @@ from .constants import (
     SUCCESS_CODE, BACKUP_FILE_PLAN_ID, STEP_STATUS_SUCCESS
 )
 from .utils import DataSyncManager
+from .cmdb_repository import CmdbRepository, CmdbFetchStrategy
 
 
-class StandardResultsSetPagination(PageNumberPagination):
-    """标准分页类"""
-    page_size = 10
-    page_size_query_param = 'page_size'
-    max_page_size = 100
+# ============ 业务、集群、模块数据API ============
 
 
-class BizInfoViewSet(viewsets.ReadOnlyModelViewSet):
-    """业务信息视图集"""
-    queryset = BizInfo.objects.all()
-    serializer_class = BizInfoSerializer
-    pagination_class = StandardResultsSetPagination
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['bk_biz_name']
-    ordering_fields = ['id', 'bk_biz_id', 'bk_biz_name']
-    ordering = ['bk_biz_id']
+class BizInfoAPIView(APIView):
+    """业务信息API"""
+    def get(self, request):
+        # 初始化CmdbRepository（HTTP请求模式，通过request获取认证信息）
+        cmdb_repo = CmdbRepository(request=request)
+
+        # 获取业务列表（优先从缓存获取）
+        return cmdb_repo.get_biz_list()
 
 
-class SetInfoViewSet(viewsets.ReadOnlyModelViewSet):
-    """集群信息视图集"""
-    queryset = SetInfo.objects.all()
-    serializer_class = SetInfoSerializer
-    pagination_class = StandardResultsSetPagination
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['bk_biz_id']
-    search_fields = ['bk_set_name']
-    ordering_fields = ['id', 'bk_set_id', 'bk_set_name']
-    ordering = ['bk_set_id']
+class SetInfoAPIView(APIView):
+    """
+    集群信息API
+
+    GET参数：
+        bk_biz_id (int, 必填): 业务ID
+    """
+    def get(self, request):
+        bk_biz_id = request.query_params.get('bk_biz_id')
+        if not bk_biz_id:
+            return Response({"result": False, "message": "bk_biz_id参数必填"})
+
+        # 初始化CmdbRepository（HTTP请求模式，通过request获取认证信息）
+        cmdb_repo = CmdbRepository(request=request)
+
+        # 获取集群列表（优先从缓存获取）
+        return cmdb_repo.get_set_list(bk_biz_id=int(bk_biz_id))
 
 
-class ModuleInfoViewSet(viewsets.ReadOnlyModelViewSet):
-    """模块信息视图集"""
-    queryset = ModuleInfo.objects.all()
-    serializer_class = ModuleInfoSerializer
-    pagination_class = StandardResultsSetPagination
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['bk_biz_id', 'bk_set_id']
-    search_fields = ['bk_module_name']
-    ordering_fields = ['id', 'bk_module_id', 'bk_module_name']
-    ordering = ['bk_module_id']
+class ModuleInfoAPIView(APIView):
+    """
+    模块信息API
+
+    GET参数：
+        bk_biz_id (int, 必填): 业务ID
+        bk_set_id (int, 必填): 集群ID
+    """
+    def get(self, request):
+        bk_biz_id = request.query_params.get('bk_biz_id')
+        bk_set_id = request.query_params.get('bk_set_id')
+        if not bk_biz_id or not bk_set_id:
+            return Response({"result": False, "message": "bk_biz_id和bk_set_id参数必填"})
+
+        # 初始化CmdbRepository（HTTP请求模式，通过request获取认证信息）
+        cmdb_repo = CmdbRepository(request=request)
+
+        # 获取模块列表（优先从缓存获取）
+        return cmdb_repo.get_module_list(bk_biz_id=int(bk_biz_id), bk_set_id=int(bk_set_id))
 
 
-class BackupJobViewSet(viewsets.ModelViewSet):
-    """备份作业视图集"""
-    queryset = BackupJob.objects.all().order_by('-id')
-    pagination_class = StandardResultsSetPagination
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'operator', 'job_instance_id']
-    search_fields = ['operator', 'search_path', 'suffix']
-    ordering_fields = ['id', 'created_at', 'file_count']
+# ============ 备份作业API ============
+
+class BackupJobListAPIView(APIView):
+    """备份作业列表API"""
     
-    def get_serializer_class(self):
-        """根据action返回不同的序列化器"""
-        if self.action == 'list':
-            return BackupJobListSerializer
-        if self.action == 'retrieve':
-            return BackupJobSerializer
-        return BackupJobSerializer
+    def get(self, request):
+        """获取备份作业列表"""
+        page = int(request.GET.get("page", 1))
+        page_size = int(request.GET.get("page_size", 10))
+        start = (page - 1) * page_size
+
+        total_count = BackupJob.objects.count()
+        jobs = BackupJob.objects.all()[start:start + page_size]
+
+        res_data = {
+            "result": True,
+            "data": list(jobs.values()),
+            "pagination": {
+                "count": total_count,
+                "current": page,
+                "page_size": page_size,
+            }
+        }
+        return Response(res_data)
+
+
+class BackupJobDetailAPIView(APIView):
+    """备份作业详情API"""
     
-    def retrieve(self, request, *args, **kwargs):
+    def get(self, request, pk):
         """获取备份作业详情"""
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
+        job_id = pk  # 使用URL参数中的pk作为job_id
         
-        # 按主机分组文件记录
-        records = instance.records.all()
+        job = BackupJob.objects.get(id=job_id)
+        records = job.records.all()
+
+        # 按主机分组
         host_files = defaultdict(list)
         for record in records:
             host_files[record.bk_host_id].append({
                 "file_path": record.bk_backup_name,
                 "status": record.status
             })
+
+        res_data = {
+            "result": True,
+            "data": {
+                "job": {
+                    "id": job.id,
+                    "job_instance_id": job.job_instance_id,
+                    "operator": job.operator,
+                    "search_path": job.search_path,
+                    "suffix": job.suffix,
+                    "backup_path": job.backup_path,
+                    "bk_job_link": job.bk_job_link,
+                    "status": job.status,
+                    "host_count": job.host_count,
+                    "file_count": job.file_count,
+                    "created_at": job.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                },
+                "host_files": dict(host_files)
+            }
+        }
+        return Response(res_data)
+    
+    def put(self, request, pk):
+        """更新备份作业"""
+        try:
+            job = BackupJob.objects.get(pk=pk)
+        except BackupJob.DoesNotExist:
+            return Response({
+                "result": False,
+                "message": "备份作业不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
         
-        data = serializer.data
-        data['host_files'] = dict(host_files)
+        serializer = BackupJobSerializer(job, data=request.data, partial=True)
+        if serializer.is_valid():
+            job = serializer.save()
+            res_data = {
+                "result": True,
+                "data": {
+                    "id": job.id,
+                    "job_instance_id": job.job_instance_id,
+                    "operator": job.operator,
+                    "search_path": job.search_path,
+                    "suffix": job.suffix,
+                    "backup_path": job.backup_path,
+                    "bk_job_link": job.bk_job_link,
+                    "status": job.status,
+                    "host_count": job.host_count,
+                    "file_count": job.file_count,
+                    "created_at": job.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                }
+            }
+            return Response(res_data)
+        
+        return Response({
+            "result": False,
+            "message": str(serializer.errors)
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk):
+        """删除备份作业"""
+        try:
+            job = BackupJob.objects.get(pk=pk)
+        except BackupJob.DoesNotExist:
+            return Response({
+                "result": False,
+                "message": "备份作业不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        job.delete()
         return Response({
             "result": True,
-            "data": data
+            "message": "删除成功"
         })
+
+
+class BackupJobCreateAPIView(APIView):
+    """创建备份作业API"""
+    
+    def post(self, request):
+        """创建备份作业"""
+        serializer = BackupJobSerializer(data=request.data)
+        if serializer.is_valid():
+            job = serializer.save()
+            # 返回创建的作业数据，按照原格式
+            res_data = {
+                "result": True,
+                "data": {
+                    "id": job.id,
+                    "job_instance_id": job.job_instance_id,
+                    "operator": job.operator,
+                    "search_path": job.search_path,
+                    "suffix": job.suffix,
+                    "backup_path": job.backup_path,
+                    "bk_job_link": job.bk_job_link,
+                    "status": job.status,
+                    "host_count": job.host_count,
+                    "file_count": job.file_count,
+                    "created_at": job.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                }
+            }
+            return Response(res_data, status=status.HTTP_201_CREATED)
+        
+        res_data = {
+            "result": False,
+            "message": str(serializer.errors)
+        }
+        return Response(res_data, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ============ 数据同步API ============
 
 class DataSyncAPIView(APIView):
     """数据同步API"""
     
-    def get(self, request):
-        """同步数据"""
-        bk_biz_id = request.query_params.get('bk_biz_id')
-        bk_set_id = request.query_params.get('bk_set_id')
+    def post(self, request):
+        """执行数据同步"""
+        try:
+            result = DataSyncManager.sync_all_data(request)
+            return Response(result)
+        except Exception as e:
+            return Response({
+                "result": False,
+                "message": f"数据同步失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        client = get_client_by_request(request)
-        
-        # 同步业务数据
-        biz_sync_result = DataSyncManager.sync_data(client, 'biz')
-        if not biz_sync_result.get("result"):
-            return Response(biz_sync_result)
-        
-        if bk_biz_id:
-            # 同步集群数据
-            set_sync_result = DataSyncManager.sync_data(client, 'set', bk_biz_id)
-            if not set_sync_result.get("result"):
-                return Response(set_sync_result)
-            
-            if bk_set_id:
-                # 同步模块数据
-                module_sync_result = DataSyncManager.sync_data(client, 'module', bk_biz_id, bk_set_id)
-                if not module_sync_result.get("result"):
-                    return Response(module_sync_result)
-        else:
-            from .tasks import sync_data
-            sync_data.delay()
-        
-        return Response({
-            "result": True,
-            "message": "同步成功"
-        })
 
+# ============ 主机相关API ============
 
 class HostListAPIView(APIView):
     """主机列表API"""
@@ -238,6 +342,8 @@ class HostDetailAPIView(APIView):
         result = client.cc.get_host_base_info(kwargs)
         return Response(result)
 
+
+# ============ 文件操作API ============
 
 class SearchFileAPIView(APIView):
     """搜索文件API"""
@@ -420,14 +526,6 @@ class BackupFileAPIView(APIView):
             step_res = response.get("log_content")
             json_step_res = json.loads(step_res)
 
-            for step_res in json_step_res:
-                BackupRecord.objects.create(
-                    backup_job=backup_job,
-                    bk_host_id=bk_host_id,
-                    status="success",
-                    bk_backup_name=step_res.get("bk_backup_name", "unknown"),
-                )
-                total_files += 1
 
         backup_job.file_count = total_files
         backup_job.status = "success"
