@@ -19,16 +19,7 @@ urlpatterns = (
     url(r"^$", views.home),
     url(r"^dev-guide/$", views.dev_guide),
     url(r"^contact/$", views.contact),
-    url(r"biz-list", views.get_bizs_list),
-    url(r"set-list", views.get_sets_list),
-    url(r"module-list", views.get_modules_list),
-    url(r"host-list", views.get_hosts_list),
-    url(r"host-detail", views.get_host_detail),
-    url(r"search-file", views.search_file),
-    url(r"backup-file", views.backup_file),
-    url(r"backup-jobs", views.get_backup_jobs),
-    url(r"backup-job-detail", views.get_backup_job_detail),
-    url(r"sync", views.sync),
+
 
 
 )
