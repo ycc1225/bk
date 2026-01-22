@@ -76,6 +76,7 @@ class ApiRequestCount(models.Model):
     api_category = models.CharField(verbose_name="API类别", max_length=255)
     api_name = models.CharField(verbose_name="API名称", max_length=255)
     request_count = models.IntegerField(verbose_name="请求次数", default=0)
+    error_count = models.IntegerField(verbose_name="错误请求次数", default=0)
 
     class Meta:
         unique_together = ("api_category", "api_name")  # 联合唯一索引

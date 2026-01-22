@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task
-def record_api_request_task(username, api_category, api_name):
+def record_api_request_task(username, api_category, api_name, is_error=False):
     """
     异步记录 API 请求次数
     
@@ -23,6 +23,7 @@ def record_api_request_task(username, api_category, api_name):
         username (str): 用户名
         api_category (str): API类别（CMDB/JOB/Unknown）
         api_name (str): API名称
+        is_error (bool): 是否为错误请求，默认为 False
     """
     try:
         # 根据 api_category 和 api_name 记录请求次数
@@ -31,15 +32,25 @@ def record_api_request_task(username, api_category, api_name):
             api_name=api_name
         )
         
-        # 使用 F() 表达式原子性地增加请求次数
+        # 使用 F() 表达式原子性地增加请求次数和错误次数
         from django.db.models import F
-        api_request_count.request_count = F("request_count") + 1
-        api_request_count.save()
         
-        logger.info(
-            f"成功记录用户行为: 用户={username}, 类别={api_category}, "
-            f"接口={api_name}, 新记录={created}"
-        )
+        if is_error:
+            # 增加错误计数
+            api_request_count.error_count = F("error_count") + 1
+            logger.warning(
+                f"记录错误请求: 用户={username}, 类别={api_category}, "
+                f"接口={api_name}, 新记录={created}"
+            )
+        else:
+            # 增加正常请求计数
+            api_request_count.request_count = F("request_count") + 1
+            logger.info(
+                f"成功记录用户行为: 用户={username}, 类别={api_category}, "
+                f"接口={api_name}, 新记录={created}"
+            )
+        
+        api_request_count.save()
     except Exception as e:
         logger.error(
             f"异步记录用户行为失败: 用户={username}, 类别={api_category}, "
