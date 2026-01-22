@@ -10,45 +10,36 @@ import time
 from celery import shared_task
 
 from home_application.models import ApiRequestCount, BackupJob, BackupRecord
+from home_application.redis_utils import fetch_and_clear_api_counts
+import logging
+from django.db.models import F
 
 logger = logging.getLogger(__name__)
 
 
 @shared_task
-def record_api_request_task(username, api_category, api_name, is_error=False):
+def record_api_request_task(username, api_category, api_name, is_error=False, date=None):
     """
-    异步记录 API 请求次数
-    
-    Args:
-        username (str): 用户名
-        api_category (str): API类别（CMDB/JOB/Unknown）
-        api_name (str): API名称
-        is_error (bool): 是否为错误请求，默认为 False
+    异步记录 API 请求次数 (保留作为备用或单次记录使用)
     """
     try:
-        # 根据 api_category 和 api_name 记录请求次数
+        from django.utils import timezone
+        if date is None:
+            date = timezone.now().date()
+            
+        # 根据 api_category, api_name 和 date 记录请求次数
         api_request_count, created = ApiRequestCount.objects.get_or_create(
             api_category=api_category,
-            api_name=api_name
+            api_name=api_name,
+            date=date
         )
-        
-        # 使用 F() 表达式原子性地增加请求次数和错误次数
-        from django.db.models import F
         
         if is_error:
             # 增加错误计数
             api_request_count.error_count = F("error_count") + 1
-            logger.warning(
-                f"记录错误请求: 用户={username}, 类别={api_category}, "
-                f"接口={api_name}, 新记录={created}"
-            )
         else:
             # 增加正常请求计数
             api_request_count.request_count = F("request_count") + 1
-            logger.info(
-                f"成功记录用户行为: 用户={username}, 类别={api_category}, "
-                f"接口={api_name}, 新记录={created}"
-            )
         
         api_request_count.save()
     except Exception as e:
@@ -56,8 +47,53 @@ def record_api_request_task(username, api_category, api_name, is_error=False):
             f"异步记录用户行为失败: 用户={username}, 类别={api_category}, "
             f"接口={api_name}, 错误={str(e)}"
         )
-        # 任务失败不会影响主流程，静默处理
         pass
+
+
+@shared_task
+def sync_api_counts_task():
+    """
+    定时任务：从 Redis 同步 API 计数到数据库
+    """
+    try:
+        # 获取并清除 Redis 中的计数
+        data = fetch_and_clear_api_counts()
+        
+        if not data:
+            return "No data to sync"
+            
+        count = 0
+        for (date_str, category, name), stats in data.items():
+            req_count = stats.get('req', 0)
+            err_count = stats.get('err', 0)
+            
+            if req_count == 0 and err_count == 0:
+                continue
+                
+            # 更新数据库
+            # 使用 update_or_create 或者 get_or_create + F 表达式
+            
+            obj, created = ApiRequestCount.objects.get_or_create(
+                api_category=category,
+                api_name=name,
+                date=date_str
+            )
+            
+            # 使用 F 表达式原子更新
+            if req_count > 0:
+                obj.request_count = F('request_count') + req_count
+            if err_count > 0:
+                obj.error_count = F('error_count') + err_count
+                
+            obj.save()
+            count += 1
+            
+        logger.info(f"Successfully synced {count} api request records from redis")
+        return f"Synced {count} records"
+        
+    except Exception as e:
+        logger.error(f"Failed to sync api counts: {e}")
+        return f"Failed: {e}"
 
 
 @shared_task
