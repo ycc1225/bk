@@ -349,7 +349,7 @@ class BackupFileAPIView(APIView):
     """
     备份文件API
     
-    GET参数：
+    POST参数：
         host_id_list (str, 必填): 主机ID列表，逗号分隔
         search_path (str, 必填): 搜索路径
         suffix (str, 必填): 文件后缀
@@ -359,13 +359,13 @@ class BackupFileAPIView(APIView):
         job_instance_id: 作业实例ID，可用于查询作业状态
     """
     
-    def get(self, request):
+    def post(self, request):
         """备份文件到指定目录（异步处理）"""
-        host_id_list_str = request.query_params.get("host_id_list")
+        host_id_list_str = request.data.get("host_id_list")
         host_id_list = [int(bk_host_id) for bk_host_id in host_id_list_str.split(",")]
-        search_path = request.query_params.get("search_path")
-        suffix = request.query_params.get("suffix")
-        backup_path = request.query_params.get("backup_path")
+        search_path = request.data.get("search_path")
+        suffix = request.data.get("suffix")
+        backup_path = request.data.get("backup_path")
 
         # 执行作业计划
         kwargs = {
