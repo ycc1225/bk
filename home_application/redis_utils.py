@@ -47,14 +47,16 @@ def increment_api_count(category, name, date, is_error=False):
     except Exception as e:
         logger.error(f"Failed to increment api count in redis: {e}")
 
-def fetch_and_clear_api_counts():
+def fetch_api_counts_and_rename():
     """
-    获取并清除 Redis 中的 API 计数
-    返回格式: { (date, category, name): {'req': count, 'err': count}, ... }
+    获取并重命名 Redis 中的 API 计数 Key，以便后续处理
+    返回: (data, temp_key)
+    data 格式: { (date, category, name): {'req': count, 'err': count}, ... }
+    temp_key: 重命名后的临时 Key，处理完成后需调用 delete_redis_key 删除
     """
     client = get_redis_client()
     if not client:
-        return {}
+        return {}, None
 
     # 使用 RENAME 原子性地将当前统计 Key 重命名，以便处理
     # 这样在处理期间的新写入会进入新的 Key
@@ -65,19 +67,17 @@ def fetch_and_clear_api_counts():
         client.rename(API_STATS_KEY, temp_key)
     except redis.exceptions.ResponseError:
         # Key 不存在（通常意味着没有数据）
-        return {}
+        return {}, None
     except Exception as e:
         logger.error(f"Failed to rename redis key: {e}")
-        return {}
+        return {}, None
 
     try:
         # 获取所有数据
         raw_data = client.hgetall(temp_key)
-        # 处理完后删除临时 Key
-        client.delete(temp_key)
     except Exception as e:
-        logger.error(f"Failed to fetch/delete redis data: {e}")
-        return {}
+        logger.error(f"Failed to fetch redis data: {e}")
+        return {}, None
 
     # 解析数据
     parsed_data = {}
@@ -118,4 +118,28 @@ def fetch_and_clear_api_counts():
             logger.error(f"Error parsing redis data field {field_bytes}: {e}")
             continue
             
-    return parsed_data
+    return parsed_data, temp_key
+
+def delete_redis_key(key):
+    """
+    删除 Redis Key
+    """
+    client = get_redis_client()
+    if not client or not key:
+        return
+        
+    try:
+        client.delete(key)
+    except Exception as e:
+        logger.error(f"Failed to delete redis key {key}: {e}")
+
+# 保留旧函数名以兼容（如果其他地方用到），但建议使用新的拆分逻辑
+def fetch_and_clear_api_counts():
+    """
+    (已弃用，建议使用 fetch_api_counts_and_rename + delete_redis_key)
+    获取并清除 Redis 中的 API 计数
+    """
+    data, temp_key = fetch_api_counts_and_rename()
+    if temp_key:
+        delete_redis_key(temp_key)
+    return data
