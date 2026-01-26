@@ -27,7 +27,7 @@ WEB_SUCCESS_CODE = 0
 SEARCH_FILE_PLAN_ID = 1000451   # 将这里的方案ID更改为你自己在JOB平台上新建的方案ID
 BACKUP_FILE_PLAN_ID = 1000452
 
-CALLBACK_URL = os.getenv("BACKEND_URL") + "api/backup-callback/"
+CALLBACK_URL = os.getenv("BACKEND_URL", "") + "api/backup-callback/"
 
 # API鉴权信息
 _auth_info = {

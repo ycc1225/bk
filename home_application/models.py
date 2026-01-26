@@ -65,7 +65,8 @@ class SyncStatus(models.Model):
     def mark_failed(self, error: str):
         self.last_status = "failed"
         self.last_error = error[:2000]
-        self.save(update_fields=["last_status", "last_error"])
+        self.updated_at = timezone.now()
+        self.save(update_fields=["last_status", "last_error", "updated_at"])
 
 
 class BackupJob(models.Model):

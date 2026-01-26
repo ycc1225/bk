@@ -15,7 +15,7 @@ from django.conf.urls import url
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from home_application.views.sync import TopoSyncAPIView
+from home_application.views.sync import TopoSyncAPIView, SyncStatusAPIView, BasicSyncAPIView
 from .views.host import HostDetailAPIView, HostListAPIView
 from .views.biz import BizInfoViewSet
 from .views.job import SearchFileAPIView, BackupFileAPIView
@@ -30,7 +30,8 @@ router.register(r"module-list", ModuleInfoViewSet, basename="module-list")
 
 urlpatterns = (
     path("", include(router.urls)),
-    url(r"^sync/$",TopoSyncAPIView.as_view()),
+    url(r"^sync/$",BasicSyncAPIView.as_view()),
+    url(r"^sync-status/$",SyncStatusAPIView.as_view()),
     url(r"^host-list/$", HostListAPIView.as_view()),
     url(r"^host-detail/$", HostDetailAPIView.as_view()),
     # 文件操作
