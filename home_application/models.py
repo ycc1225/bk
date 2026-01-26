@@ -12,6 +12,7 @@ specific language governing permissions and limitations under the License.
 """
 
 from django.db import models
+from django.utils import timezone
 
 
 # Create your models here.
@@ -20,7 +21,7 @@ class BizInfo(models.Model):
     """
     业务信息
     """
-    bk_biz_id = models.IntegerField(unique=True)
+    bk_biz_id = models.IntegerField(unique=True,db_index=True)
     bk_biz_name = models.CharField(max_length=50)
 
 
@@ -28,19 +29,43 @@ class SetInfo(models.Model):
     """
     集群信息
     """
-    bk_set_id = models.IntegerField(unique=True)
+    bk_set_id = models.IntegerField(unique=True,db_index=True)
     bk_set_name = models.CharField(max_length=100)
-    bk_biz_id = models.IntegerField()
+    bk_biz_id = models.IntegerField(db_index=True)
 
 
 class ModuleInfo(models.Model):
     """
     模块信息
     """
-    bk_module_id = models.IntegerField(unique=True)
+    bk_module_id = models.IntegerField(unique=True,db_index=True)
     bk_module_name = models.CharField(max_length=100)
-    bk_set_id = models.IntegerField()
-    bk_biz_id = models.IntegerField()
+    bk_set_id = models.IntegerField(db_index=True)
+    bk_biz_id = models.IntegerField(db_index=True)
+
+class SyncStatus(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    last_sync_at = models.DateTimeField(null=True)
+    last_status = models.CharField(
+        max_length=20,
+        choices=(("success", "success"), ("failed", "failed")),
+        null=True,
+    )
+    last_error = models.TextField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+    def mark_success(self):
+        self.last_sync_at = timezone.now()
+        self.last_status = "success"
+        self.last_error = None
+        self.save(update_fields=["last_sync_at", "last_status", "last_error"])
+
+
+    def mark_failed(self, error: str):
+        self.last_status = "failed"
+        self.last_error = error[:2000]
+        self.save(update_fields=["last_status", "last_error"])
 
 
 class BackupJob(models.Model):

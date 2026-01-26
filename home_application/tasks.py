@@ -14,6 +14,9 @@ from home_application.redis_utils import fetch_api_counts_and_rename, delete_red
 import logging
 from django.db.models import F
 
+from home_application.services.basic_sync import BasicCMDBSyncService
+from home_application.services.topo_sync import TopoCMDBSyncService
+
 logger = logging.getLogger(__name__)
 
 
@@ -120,6 +123,7 @@ def sync_api_counts_task():
 def sync_data():
     """
     异步同步数据
+    :param bk_username: 触发同步的用户名，默认为系统账号
     """
     from home_application.cmdb_repository import CmdbRepository
 
@@ -146,6 +150,15 @@ def sync_data():
     except Exception as e:
         logger.error(f"异步同步数据失败: {str(e)}")
         pass
+
+
+@shared_task
+def basic_sync_data_task():
+    BasicCMDBSyncService().sync_all()
+
+@shared_task
+def topo_sync_data_task(token):
+    TopoCMDBSyncService(token).sync()
 
 
 @shared_task(bind=True, max_retries=3)

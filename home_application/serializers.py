@@ -7,35 +7,23 @@ from .models import BizInfo, SetInfo, ModuleInfo, BackupJob, BackupRecord, ApiRe
 
 
 class BizInfoSerializer(serializers.ModelSerializer):
-    """业务信息序列化器"""
-    
     class Meta:
         model = BizInfo
-        fields = ['id', 'bk_biz_id', 'bk_biz_name']
-        read_only_fields = ['id']
+        fields = ['bk_biz_id', 'bk_biz_name']
 
 
 class SetInfoSerializer(serializers.ModelSerializer):
-    """集群信息序列化器"""
-    
     class Meta:
         model = SetInfo
-        fields = ['id', 'bk_set_id', 'bk_set_name', 'bk_biz_id']
-        read_only_fields = ['id']
-
+        fields = ['bk_set_id', 'bk_set_name', 'bk_biz_id']
 
 class ModuleInfoSerializer(serializers.ModelSerializer):
-    """模块信息序列化器"""
-    
     class Meta:
         model = ModuleInfo
-        fields = ['id', 'bk_module_id', 'bk_module_name', 'bk_set_id', 'bk_biz_id']
-        read_only_fields = ['id']
+        fields = ['bk_module_id', 'bk_module_name', 'bk_set_id', 'bk_biz_id']
 
 
 class BackupRecordSerializer(serializers.ModelSerializer):
-    """备份记录序列化器"""
-    
     class Meta:
         model = BackupRecord
         fields = ['id', 'bk_host_id', 'status', 'bk_backup_name']
@@ -72,8 +60,6 @@ class BackupJobListSerializer(serializers.ModelSerializer):
 
 
 class ApiRequestCountSerializer(serializers.ModelSerializer):
-    """API请求次数序列化器"""
-    
     class Meta:
         model = ApiRequestCount
         fields = ['id', 'api_category', 'api_name', 'request_count']

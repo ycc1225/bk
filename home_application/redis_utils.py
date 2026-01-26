@@ -133,6 +133,38 @@ def delete_redis_key(key):
     except Exception as e:
         logger.error(f"Failed to delete redis key {key}: {e}")
 
+LAST_SYNC_TIME_KEY = "cmdb_last_sync_time"
+
+def set_last_sync_time(timestamp_str):
+    """
+    设置上次成功同步时间
+    :param timestamp_str: 时间字符串
+    """
+    client = get_redis_client()
+    if not client:
+        return
+    
+    try:
+        client.set(LAST_SYNC_TIME_KEY, timestamp_str)
+    except Exception as e:
+        logger.error(f"Failed to set last sync time: {e}")
+
+def get_last_sync_time():
+    """
+    获取上次成功同步时间
+    :return: 时间字符串 or None
+    """
+    client = get_redis_client()
+    if not client:
+        return None
+        
+    try:
+        val = client.get(LAST_SYNC_TIME_KEY)
+        return val.decode('utf-8') if val else None
+    except Exception as e:
+        logger.error(f"Failed to get last sync time: {e}")
+        return None
+
 # 保留旧函数名以兼容（如果其他地方用到），但建议使用新的拆分逻辑
 def fetch_and_clear_api_counts():
     """

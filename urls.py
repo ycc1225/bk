@@ -25,5 +25,5 @@ urlpatterns = [
     url(r"^mako/", include("mako_application.urls")),
     url(r"^i18n/", include("django.conf.urls.i18n")),
     # DRF API 路由
-    url(r"^api/", include("home_application.api_urls")),
+    url(r"^api/", include("home_application.urls")),
 ]
