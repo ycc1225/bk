@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from home_application.models import SyncStatus
+from home_application.serializers import SyncStatusSerializer
 from home_application.tasks import basic_sync_data_task, topo_sync_data_task
 
 
@@ -24,5 +25,9 @@ class TopoSyncAPIView(APIView):
 
 class SyncStatusAPIView(APIView):
     def get(self, request):
-        data = SyncStatus.objects.last()
+        instance = SyncStatus.objects.last()
+        if instance:
+            data = SyncStatusSerializer(instance).data
+        else:
+            data = {}
         return Response(ok_data(data=data))

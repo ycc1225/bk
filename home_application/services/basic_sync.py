@@ -1,10 +1,13 @@
 # cmdb/services/basic_sync.py
+import logging
 
 from django.db import transaction
+
 from home_application.models import BizInfo, SetInfo, ModuleInfo, SyncStatus
 from home_application.services.cmdb_api_client import CMDBApiClient
 from home_application.services.cmdb_client import CMDBClient
 
+logger = logging.getLogger(__name__)
 
 class BasicCMDBSyncService:
     STATUS_NAME = "basic_sync"
@@ -27,126 +30,123 @@ class BasicCMDBSyncService:
         else:
             self.status.mark_success()
 
-    @transaction.atomic
     def sync_biz(self):
-        biz_list = self.client.get_biz()
+        biz_list = self.client.get_biz()['data']['info']
 
-        biz_ids = [b["bk_biz_id"] for b in biz_list]
-
-        # 1. 查已存在的
-        existing_map = SetInfo.objects.in_bulk(
-            field_name="bk_set_id"
+        return self._save_to_database(
+            config={
+                "model": BizInfo,
+                "unique_field": "bk_biz_id",
+                "defaults_map": {
+                    "bk_biz_name": "bk_biz_name",
+                },
+            },
+            data_list=biz_list,
         )
 
-        to_update = []
-        to_create = []
-
-        for biz in biz_list:
-            obj = existing_map.get(biz["bk_biz_id"])
-            if obj:
-                obj.bk_biz_name = biz["bk_biz_name"]
-                to_update.append(obj)
-            else:
-                to_create.append(
-                    BizInfo(
-                        bk_biz_id=biz["bk_biz_id"],
-                        bk_biz_name=biz["bk_biz_name"],
-                    )
-                )
-
-        # 2. 批量更新
-        if to_update:
-            BizInfo.objects.bulk_update(to_update, ["bk_biz_name"])
-
-        # 3. 批量创建
-        if to_create:
-            BizInfo.objects.bulk_create(to_create)
-
-        # 4. 删除多余的
-        BizInfo.objects.exclude(bk_biz_id__in=biz_ids).delete()
-
-    @transaction.atomic
     def sync_set(self):
-        existing_map = SetInfo.objects.in_bulk(
-            field_name="bk_set_id"
-        )
-
-        seen_ids = set()
-        to_update = []
-        to_create = []
+        data_list = []
 
         for biz in BizInfo.objects.all():
-            set_list = self.client.get_set(biz.bk_biz_id)
+            set_list = self.client.get_set(biz.bk_biz_id)['data']['info']
             for s in set_list:
-                seen_ids.add(s["bk_set_id"])
-                obj = existing_map.get(s["bk_set_id"])
-                if obj:
-                    obj.bk_set_name = s["bk_set_name"]
-                    obj.bk_biz_id = biz.bk_biz_id
-                    to_update.append(obj)
-                else:
-                    to_create.append(
-                        SetInfo(
-                            bk_set_id=s["bk_set_id"],
-                            bk_set_name=s["bk_set_name"],
-                            bk_biz_id=biz.bk_biz_id,
-                        )
-                    )
+                data_list.append(s)
 
-        if to_update:
-            SetInfo.objects.bulk_update(
-                to_update, ["bk_set_name", "bk_biz_id"]
-            )
-
-        if to_create:
-            SetInfo.objects.bulk_create(to_create)
-
-        SetInfo.objects.exclude(bk_set_id__in=seen_ids).delete()
-
-    @transaction.atomic
-    def sync_module(self):
-        # ✅ 关键修复点：用 in_bulk
-        existing_map = ModuleInfo.objects.in_bulk(
-            field_name="bk_module_id"
+        return self._save_to_database(
+            config={
+                "model": SetInfo,
+                "unique_field": "bk_set_id",
+                "defaults_map": {
+                    "bk_set_name": "bk_set_name",
+                    "bk_biz_id": "bk_biz_id",
+                },
+            },
+            data_list=data_list,
         )
 
-        seen_ids = set()
-        to_update = []
-        to_create = []
+    def sync_module(self):
+        data_list = []
 
         for s in SetInfo.objects.all():
             module_list = self.client.get_module(
                 s.bk_biz_id, s.bk_set_id
-            )
+            )['data']['info']
             for m in module_list:
-                seen_ids.add(m["bk_module_id"])
-                obj = existing_map.get(m["bk_module_id"])
+                data_list.append(m)
 
-                if obj:
-                    # obj.pk 在 in_bulk 场景下是 100% 存在的
-                    obj.bk_module_name = m["bk_module_name"]
-                    obj.bk_set_id = s.bk_set_id
-                    obj.bk_biz_id = s.bk_biz_id
-                    to_update.append(obj)
-                else:
-                    to_create.append(
-                        ModuleInfo(
-                            bk_module_id=m["bk_module_id"],
-                            bk_module_name=m["bk_module_name"],
-                            bk_set_id=s.bk_set_id,
-                            bk_biz_id=s.bk_biz_id,
-                        )
+        return self._save_to_database(
+            config={
+                "model": ModuleInfo,
+                "unique_field": "bk_module_id",
+                "defaults_map": {
+                    "bk_module_name": "bk_module_name",
+                    "bk_set_id": "bk_set_id",
+                    "bk_biz_id": "bk_biz_id",
+                },
+            },
+            data_list=data_list,
+        )
+
+
+
+
+    def _save_to_database(
+            self,
+            config: dict,
+            data_list: list,
+    ) -> dict:
+        """
+        将 CMDB 数据保存到数据库
+
+        config = {
+            "model": ModelClass,
+            "unique_field": "bk_xxx_id",
+            "defaults_map": {
+                "model_field": "api_field"
+            }
+        }
+        """
+        model_class = config["model"]
+        unique_field = config["unique_field"]
+        defaults_map = config["defaults_map"]
+
+        saved_count = 0
+        data_list = data_list
+
+        try:
+            with transaction.atomic():
+                for item in data_list:
+                    # 必填字段校验
+                    if unique_field not in item or item[unique_field] is None:
+                        continue
+
+                    defaults = {}
+                    for model_field, api_field in defaults_map.items():
+                        if api_field in item:
+                            defaults[model_field] = item[api_field]
+
+                    model_class.objects.update_or_create(
+                        **{unique_field: item[unique_field]},
+                        defaults=defaults,
                     )
+                    saved_count += 1
 
-        if to_update:
-            ModuleInfo.objects.bulk_update(
-                to_update,
-                ["bk_module_name", "bk_set_id", "bk_biz_id"],
+            logger.info(
+                f"成功保存 {saved_count} 条 {model_class.__name__} 数据"
             )
 
-        if to_create:
-            ModuleInfo.objects.bulk_create(to_create)
+            return {
+                "success": True,
+                "message": f"保存 {saved_count} 条数据成功",
+                "saved_count": saved_count,
+            }
 
-        ModuleInfo.objects.exclude(
-            bk_module_id__in=seen_ids
-        ).delete()
+        except Exception as e:
+            logger.exception(
+                f"保存 {model_class.__name__} 数据失败"
+            )
+            return {
+                "success": False,
+                "message": str(e),
+                "saved_count": 0,
+            }

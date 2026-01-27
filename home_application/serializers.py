@@ -3,7 +3,7 @@
 DRF 序列化器定义
 """
 from rest_framework import serializers
-from .models import BizInfo, SetInfo, ModuleInfo, BackupJob, BackupRecord, ApiRequestCount
+from .models import BizInfo, SetInfo, ModuleInfo, BackupJob, BackupRecord, ApiRequestCount, SyncStatus
 
 
 class BizInfoSerializer(serializers.ModelSerializer):
@@ -62,5 +62,10 @@ class BackupJobListSerializer(serializers.ModelSerializer):
 class ApiRequestCountSerializer(serializers.ModelSerializer):
     class Meta:
         model = ApiRequestCount
-        fields = ['id', 'api_category', 'api_name', 'request_count']
-        read_only_fields = ['id']
+        fields = ['api_category', 'api_name', 'request_count']
+
+class SyncStatusSerializer(serializers.ModelSerializer):
+    last_sync_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S',read_only=True)
+    class Meta:
+        model = SyncStatus
+        fields = ['name', 'last_status', 'last_sync_at', 'last_error']
