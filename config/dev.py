@@ -10,6 +10,8 @@ Unless required by applicable law or agreed to in writing, software distributed 
 an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
 specific language governing permissions and limitations under the License.
 """
+import os
+
 from config import RUN_VER
 from config.default import FRONTEND_BACKEND_SEPARATION
 from blueapps.conf.validators import EnvValidator
@@ -41,7 +43,11 @@ STATIC_URL = "/static/"
 # Celery 消息队列设置 RabbitMQ
 # BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 # Celery 消息队列设置 Redis
-BROKER_URL = "redis://localhost:6379/0"
+BROKER_URL = os.getenv("BROKER_URL")
+BROKER_TRANSPORT_OPTIONS = {
+    'global_keyprefix': f'{APP_CODE}_celery_',  # 消息队列键前缀
+}
+
 
 DEBUG = True
 
