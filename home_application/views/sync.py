@@ -11,7 +11,7 @@ class BasicSyncAPIView(APIView):
     def get(self, request):
         token = request.COOKIES.get("bk_token")
         if not token:
-            return Response(failed(message="未获取到bk_token"))
+            return Response(failed(message="未授权"))
         basic_sync_data_task.delay(token)
         return Response(ok_data())
 
@@ -19,7 +19,7 @@ class TopoSyncAPIView(APIView):
     def get(self, request):
         token = request.COOKIES.get("bk_token")
         if not token:
-            return Response(failed(message="未获取到bk_token"))
+            return Response(failed(message="未授权"))
         topo_sync_data_task.delay(token)
         return Response(ok_data())
 

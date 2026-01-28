@@ -128,7 +128,7 @@ def topo_sync_data_task(token):
 
 
 @shared_task(bind=True, max_retries=3)
-def process_backup_job_task(job_instance_id, bk_token, operator, host_id_list):
+def process_backup_job_task(self,job_instance_id, bk_token, operator, host_id_list):
     """
     异步处理备份作业：轮询作业状态，完成后获取日志并创建备份记录
 
