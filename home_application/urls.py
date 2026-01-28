@@ -30,7 +30,7 @@ router.register(r"module-list", ModuleInfoViewSet, basename="module-list")
 
 urlpatterns = (
     path("", include(router.urls)),
-    url(r"^sync/$",BasicSyncAPIView.as_view()),
+    url(r"^sync/$",TopoSyncAPIView.as_view()),
     url(r"^sync-status/$",SyncStatusAPIView.as_view()),
     url(r"^host-list/$", HostListAPIView.as_view()),
     url(r"^host-detail/$", HostDetailAPIView.as_view()),

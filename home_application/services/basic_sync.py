@@ -21,6 +21,7 @@ class BasicCMDBSyncService:
 
     def sync(self):
         try:
+            self.status.mark_running()
             self.sync_biz()
             self.sync_set()
             self.sync_module()

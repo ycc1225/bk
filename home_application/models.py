@@ -48,12 +48,11 @@ class SyncStatus(models.Model):
     last_sync_at = models.DateTimeField(null=True)
     last_status = models.CharField(
         max_length=20,
-        choices=(("success", "success"), ("failed", "failed")),
+        choices=(("success", "success"), ("failed", "failed"), ("pending", "pending"),("running", "running")),
         null=True,
     )
     last_error = models.TextField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
-
 
     def mark_success(self):
         self.last_sync_at = timezone.now()
@@ -61,6 +60,10 @@ class SyncStatus(models.Model):
         self.last_error = None
         self.save(update_fields=["last_sync_at", "last_status", "last_error"])
 
+    def mark_running(self):
+        self.last_status = "running"
+        self.updated_at = timezone.now()
+        self.save(update_fields=["last_status", "updated_at"])
 
     def mark_failed(self, error: str):
         self.last_status = "failed"

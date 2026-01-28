@@ -45,7 +45,7 @@ class CMDBClient:
         kwargs = {
             "bk_biz_id": biz_id,
         }
-        return self.client.cc.search_biz_inst_topo(biz_id)
+        return self.client.cc.search_biz_inst_topo(kwargs)
 
     def get_host_list(self, args):
         return self.client.cc.list_biz_hosts(args)
