@@ -57,16 +57,17 @@ class SearchFileAPIView(APIView):
         attempts = 0
         while attempts < MAX_ATTEMPTS:
             step_instance_list = client.jobv3.get_job_instance_status(**kwargs).get("data").get("step_instance_list")
-            if step_instance_list[0].get("status") == WAITING_CODE:
+            status = step_instance_list[0].get("status")
+            if status == WAITING_CODE:
                 time.sleep(JOB_RESULT_ATTEMPTS_INTERVAL)
-            elif step_instance_list[0].get("status") != SUCCESS_CODE:
+            elif status == SUCCESS_CODE:
+                break
+            else:  # 既不是 WAITING 也不是 SUCCESS，就是失败
                 return Response({
                     "result": False,
                     "code": WEB_SUCCESS_CODE,
                     "message": "查询失败",
                 })
-            elif step_instance_list[0].get("status") == SUCCESS_CODE:
-                break
             attempts += 1
 
         if attempts == MAX_ATTEMPTS:

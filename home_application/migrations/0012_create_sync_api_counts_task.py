@@ -23,7 +23,7 @@ def create_periodic_task(apps, schema_editor):
         name='Sync API Counts to DB',
         defaults={
             'interval': schedule,
-            'task': 'home_application.tasks.sync_api_counts_task',
+            'task': 'home_application.tasks.api_count.sync_api_counts_task',
             'enabled': True,
             'description': '每5秒从Redis同步API请求统计到数据库',
         }
