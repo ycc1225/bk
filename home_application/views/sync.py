@@ -6,7 +6,7 @@ from datetime import timedelta
 
 from home_application.models import SyncStatus
 from home_application.serializers import SyncStatusSerializer
-from home_application.tasks import basic_sync_data_task, topo_sync_data_task
+from home_application.tasks.cmdb_sync import basic_sync_data_task, topo_sync_data_task
 
 
 class BasicSyncAPIView(APIView):

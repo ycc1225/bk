@@ -1,5 +1,6 @@
 import os
 
+from blueking.component import client as component_client
 from blueking.component.shortcuts import get_client_by_request
 from config import APP_CODE, SECRET_KEY
 from home_application.constants import DATA_CONFIGS
@@ -10,8 +11,6 @@ class CMDBClient:
         if request:
             self.client = get_client_by_request(request)
         elif token:
-            from blueking.component import client as component_client
-            from blueking.component import conf
             self.client = component_client.ComponentClient(
                 APP_CODE,
                 SECRET_KEY,

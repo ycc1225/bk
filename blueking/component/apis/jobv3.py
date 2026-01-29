@@ -128,3 +128,8 @@ class CollectionsJOBV3(object):
             path='/api/c/compapi{bk_api_ver}/jobv3/update_cron_status/',
             description=u'更新定时作业状态，如启动或暂停'
         )
+        self.batch_get_job_instance_ip_log = ComponentAPI(
+            client=self.client, method='POST',
+            path='/api/c/compapi{bk_api_ver}/jobv3/batch_get_job_instance_ip_log/',
+            description=u'批量获取作业实例的执行日志'
+        )

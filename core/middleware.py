@@ -2,11 +2,6 @@
 
 from django.utils.deprecation import MiddlewareMixin
 import logging
-from django.db.models import F
-
-
-from home_application.models import ApiRequestCount
-from home_application.redis_utils import increment_api_count
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +65,7 @@ class RecordUserBehaviorMiddleware(MiddlewareMixin):
             from django.utils import timezone
             today = timezone.now().date()
 
-            from home_application.redis_utils import increment_api_count
+            from home_application.utils.redis_utils import increment_api_count
             increment_api_count(api_category, api_name, today, is_error)
         except Exception as e:
             # 这里即使产生了异常，也应该继续往后执行，因为埋点记录不应该影响用户请求接口，应该是静默的，所以建议学有余力的同学尝试进行异步优化

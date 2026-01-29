@@ -1,6 +1,7 @@
 import json
 import time
 
+from celery import chain
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,6 +11,9 @@ from core.middleware import logger
 from home_application.constants import WEB_SUCCESS_CODE, JOB_BK_BIZ_ID, SEARCH_FILE_PLAN_ID, MAX_ATTEMPTS, WAITING_CODE, \
     JOB_RESULT_ATTEMPTS_INTERVAL, SUCCESS_CODE, BACKUP_FILE_PLAN_ID, BK_JOB_HOST, CALLBACK_URL
 from home_application.models import BackupJob
+from home_application.tasks.job import poll_job_status, fetch_job_logs, process_backup_results
+from home_application.services.job import batch_get_job_logs
+
 
 class SearchFileAPIView(APIView):
     """搜索文件API"""
@@ -75,21 +79,24 @@ class SearchFileAPIView(APIView):
         step_instance_id = step_instance_list[0].get("step_instance_id")
 
         # 获取执行日志
-        log_list = []
-        for bk_host_id in host_id_list:
-            data = {
-                "bk_scope_type": "biz",
-                "bk_scope_id": JOB_BK_BIZ_ID,
-                "job_instance_id": job_instance_id,
-                "step_instance_id": step_instance_id,
-                "bk_host_id": bk_host_id,
-            }
+        # 使用公共函数批量获取日志，替代原有的循环单机查询，提高效率并复用逻辑
+        results = batch_get_job_logs(
+            client=client,
+            job_instance_id=job_instance_id,
+            step_instance_id=step_instance_id,
+            host_id_list=host_id_list,
+            bk_biz_id=JOB_BK_BIZ_ID
+        )
 
-            response = client.jobv3.get_job_instance_ip_log(**data).get("data")
-            step_res = response.get("log_content")
-            json_step_res = json.loads(step_res)
-            json_step_res["bk_host_id"] = response.get("bk_host_id")
-            log_list.append(json_step_res)
+        log_list = []
+        for res in results:
+            if not res["is_success"] or not res["parsed_data"]:
+                continue
+            parsed_data = res["parsed_data"]
+            bk_host_id = res["bk_host_id"]
+
+            parsed_data["bk_host_id"] = bk_host_id
+            log_list.append(parsed_data)
 
         return Response({
             "result": True,
@@ -191,13 +198,19 @@ class BackupFileAPIView(APIView):
         bk_token = request.COOKIES.get("bk_token", "")
 
         # 启动异步任务处理作业（传递 bk_token 而非 bk_username）
-        from home_application.tasks import process_backup_job_task
-        process_backup_job_task.delay(
-            job_instance_id=str(job_instance_id),
-            bk_token=bk_token,  # 使用 bk_token
-            operator=request.user.username,  # 只用于记录操作者
-            host_id_list=host_id_list,
-        )
+        # 使用 Celery Chain 编排任务：轮询状态 -> 获取日志 -> 处理结果
+        chain(
+            poll_job_status.s(
+                job_instance_id=str(job_instance_id),
+                bk_biz_id=JOB_BK_BIZ_ID,
+                bk_token=bk_token
+            ),
+            fetch_job_logs.s(
+                host_id_list=host_id_list,
+                bk_token=bk_token
+            ),
+            process_backup_results.s()
+        ).apply_async()
 
         # 立即返回，不阻塞等待作业完成
         return Response({
