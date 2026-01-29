@@ -59,7 +59,7 @@ class SearchFileAPIView(APIView):
                 return Response({
                     "result": False,
                     "code": WEB_SUCCESS_CODE,
-                    "message": "search failed",
+                    "message": "查询失败",
                 })
             elif step_instance_list[0].get("status") == SUCCESS_CODE:
                 break

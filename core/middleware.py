@@ -58,15 +58,21 @@ class RecordUserBehaviorMiddleware(MiddlewareMixin):
             # 判断接口所属类别
             api_category = 'CMDB' if api_name in CMDB_BEHAVIORS else 'JOB' if api_name in JOB_BEHAVIORS else 'Unknown'
 
-            # 判断是否为错误请求（4xx 或 5xx 状态码）
+            # 判断是否为错误请求（4xx 或 5xx 状态码）或者返回码不为0
             is_error = response.status_code >= 400
+            if not is_error:
+                try:
+                    if hasattr(response, 'data') and isinstance(response.data, dict):
+                        is_error = not response.data.get('result', True)
+                except AttributeError as e:
+                    is_error = True
 
             from django.utils import timezone
             today = timezone.now().date()
 
             from home_application.redis_utils import increment_api_count
             increment_api_count(api_category, api_name, today, is_error)
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception as e:
             # 这里即使产生了异常，也应该继续往后执行，因为埋点记录不应该影响用户请求接口，应该是静默的，所以建议学有余力的同学尝试进行异步优化
             logger.exception(f"Unexpected Exception when record user behavior:{e}")
             pass

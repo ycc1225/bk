@@ -112,6 +112,7 @@ def fetch_api_counts_and_rename():
             if type_suffix == 'req':
                 parsed_data[key]['req'] += count
             elif type_suffix == 'err':
+                parsed_data[key]['req'] += count
                 parsed_data[key]['err'] += count
                 
         except Exception as e:
