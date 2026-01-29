@@ -182,7 +182,7 @@ class BackupFileAPIView(APIView):
             suffix=suffix,
             backup_path=backup_path,
             bk_job_link=bk_job_link,
-            status="pending",
+            status=BackupJob.Status.PENDING,
             host_count=len(host_id_list),
             file_count=0,
         )
@@ -246,10 +246,13 @@ class BackupJobCallbackAPIView(APIView):
             backup_job = BackupJob.objects.get(job_instance_id=str(job_instance_id))
 
             # 只更新未完成的作业
-            if backup_job.status == "pending" or backup_job.status == "processing":
-                new_status = "success" if (int(status_code) == SUCCESS_CODE and step_status == SUCCESS_CODE) else "failed"
-                backup_job.status = new_status
-                backup_job.save()
+            if backup_job.status in [BackupJob.Status.PENDING, BackupJob.Status.PROCESSING]:
+                if int(status_code) == SUCCESS_CODE and step_status == SUCCESS_CODE:
+                    backup_job.mark_success()
+                    new_status = BackupJob.Status.SUCCESS
+                else:
+                    backup_job.mark_failed()
+                    new_status = BackupJob.Status.FAILED
 
                 logger.info(
                     f"回调更新作业状态: job_instance_id={job_instance_id}, "

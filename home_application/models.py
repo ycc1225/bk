@@ -73,19 +73,58 @@ class SyncStatus(models.Model):
 
 
 class BackupJob(models.Model):
+    class Status:
+        PENDING = "pending"
+        PROCESSING = "processing"
+        SUCCESS = "success"
+        FAILED = "failed"
+        PARTIAL = "partial"
+
+        CHOICES = (
+            (PENDING, "pending"),
+            (PROCESSING, "processing"),
+            (SUCCESS, "success"),
+            (FAILED, "failed"),
+            (PARTIAL, "partial"),
+        )
+
     job_instance_id = models.CharField(max_length=255, unique=True)  # 作业平台实例ID
     operator = models.CharField(max_length=255)  # 操作人
     search_path = models.TextField()  # 搜索路径
     suffix = models.CharField(max_length=255)  # 文件后缀
     backup_path = models.TextField()  # 备份路径
     bk_job_link = models.TextField()  # 作业链接
-    status = models.CharField(max_length=50)  # 整体状态：success/failed/partial
+    status = models.CharField(max_length=50, choices=Status.CHOICES, default=Status.PENDING)  # 整体状态：success/failed/pending/processing
     host_count = models.IntegerField(default=0)  # 主机数量
     file_count = models.IntegerField(default=0)  # 文件总数
     created_at = models.DateTimeField(auto_now_add=True)  # 创建时间
 
     class Meta:
         ordering = ['-id']
+
+    def mark_processing(self):
+        self.status = self.Status.PROCESSING
+        self.save(update_fields=['status'])
+
+    def mark_success(self, file_count=None):
+        self.status = self.Status.SUCCESS
+        if file_count is not None:
+            self.file_count = file_count
+            self.save(update_fields=['status', 'file_count'])
+        else:
+            self.save(update_fields=['status'])
+
+    def mark_failed(self):
+        self.status = self.Status.FAILED
+        self.save(update_fields=['status'])
+
+    def mark_partial(self, file_count=None):
+        self.status = self.Status.PARTIAL
+        if file_count is not None:
+            self.file_count = file_count
+            self.save(update_fields=['status', 'file_count'])
+        else:
+            self.save(update_fields=['status'])
 
 # 从表：备份记录（主机+文件）
 class BackupRecord(models.Model):

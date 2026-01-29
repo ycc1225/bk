@@ -161,7 +161,7 @@ def process_backup_job_task(self,job_instance_id, bk_token, operator, host_id_li
         }
 
     # 如果作业已经处理完成，直接返回
-    if backup_job.status in ["success", "failed"] and backup_job.file_count > 0:
+    if backup_job.status in [BackupJob.Status.SUCCESS, BackupJob.Status.FAILED, BackupJob.Status.PARTIAL] and backup_job.file_count > 0:
         logger.info(f"备份作业已处理完成: job_instance_id={job_instance_id}, status={backup_job.status}")
         return {
             "result": True,
@@ -200,8 +200,7 @@ def process_backup_job_task(self,job_instance_id, bk_token, operator, host_id_li
                 attempts += 1
             elif step_status != SUCCESS_CODE:
                 logger.error(f"作业执行失败: job_instance_id={job_instance_id}, status={step_status}")
-                backup_job.status = "failed"
-                backup_job.save()
+                backup_job.mark_failed()
                 return None
             else:
                 step_instance_id = step_instance_list[0].get("step_instance_id")
@@ -215,8 +214,7 @@ def process_backup_job_task(self,job_instance_id, bk_token, operator, host_id_li
     if attempts >= MAX_ATTEMPTS:
         # 超过最大轮询次数，标记为处理中（可能回调会更新状态）
         logger.warning(f"作业轮询超时: job_instance_id={job_instance_id}")
-        backup_job.status = "processing"
-        backup_job.save()
+        backup_job.mark_processing()
         return None
 
     # 2. 获取各主机的执行日志
@@ -273,19 +271,15 @@ def process_backup_job_task(self,job_instance_id, bk_token, operator, host_id_li
             continue
 
     # 3. 更新备份作业状态
-    backup_job.file_count = total_files
-
     if failed_hosts == 0:
         # 所有主机都成功
-        backup_job.status = "success"
+        backup_job.mark_success(file_count=total_files)
     elif success_hosts == 0:
         # 所有主机都失败
-        backup_job.status = "failed"
+        backup_job.mark_failed()
     else:
         # 部分主机成功
-        backup_job.status = "partial"
-
-    backup_job.save()
+        backup_job.mark_partial(file_count=total_files)
     
     logger.info(
         f"备份作业处理完成: job_instance_id={job_instance_id}, "
