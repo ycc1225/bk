@@ -13,7 +13,8 @@ CMDB_BEHAVIORS = [
     'module-list',
     'host-list',
     'host-detail',
-    'sync'
+    'sync',
+    'sync-status'
 ]
 
 JOB_BEHAVIORS = [
@@ -21,6 +22,7 @@ JOB_BEHAVIORS = [
     'backup-file',
     'backup-jobs',
     'backup-callback',
+    'backup-job-detail',
 ]
 
 
