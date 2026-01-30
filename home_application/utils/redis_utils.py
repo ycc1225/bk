@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-import redis
 import logging
+
+import redis
 from django.conf import settings
-from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 

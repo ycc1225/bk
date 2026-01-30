@@ -18,6 +18,7 @@ BK_JOB_HOST = os.getenv("BKPAAS_JOB_URL")
 # JOB 平台的状态码
 WAITING_CODE = 2
 SUCCESS_CODE = 3
+FAILED_CODE = 4
 STEP_STATUS_SUCCESS = 9
 
 # 默认HTTP状态码
@@ -73,3 +74,5 @@ DATA_CONFIGS = {
         }
     }
 }
+ALLOW_PATH_PREFIX = ["/project"]
+ALLOW_FILE_SUFFIX = ["log", "txt", "csv", "json", "bak"]

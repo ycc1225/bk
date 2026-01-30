@@ -9,7 +9,8 @@ from rest_framework.views import APIView
 from blueking.component.shortcuts import get_client_by_request
 from core.middleware import logger
 from home_application.constants import WEB_SUCCESS_CODE, JOB_BK_BIZ_ID, SEARCH_FILE_PLAN_ID, MAX_ATTEMPTS, WAITING_CODE, \
-    JOB_RESULT_ATTEMPTS_INTERVAL, SUCCESS_CODE, BACKUP_FILE_PLAN_ID, BK_JOB_HOST, CALLBACK_URL
+    JOB_RESULT_ATTEMPTS_INTERVAL, SUCCESS_CODE, BACKUP_FILE_PLAN_ID, BK_JOB_HOST, CALLBACK_URL, ALLOW_PATH_PREFIX, \
+    ALLOW_FILE_SUFFIX, FAILED_CODE
 from home_application.models import BackupJob
 from home_application.tasks.job import poll_job_status, fetch_job_logs, process_backup_results
 from home_application.services.job import batch_get_job_logs
@@ -21,6 +22,23 @@ class SearchFileAPIView(APIView):
         """根据主机IP、文件目录和文件后缀查询文件"""
         host_id_list_str = request.query_params.get("host_id_list")
         host_id_list = [int(bk_host_id) for bk_host_id in host_id_list_str.split(",")]
+        search_path = request.query_params.get("search_path")
+        suffix = request.query_params.get("suffix")
+
+        # 校验参数
+        if suffix not in ALLOW_FILE_SUFFIX:
+            return Response({
+                "result": False,
+                "code": WEB_SUCCESS_CODE,
+                "message": "文件后缀不合法",
+            })
+        if not search_path.startswith(tuple(ALLOW_PATH_PREFIX)) or ".." in search_path:
+            return Response({
+                "result": False,
+                "code": WEB_SUCCESS_CODE,
+                "message": "搜索路径不合法",
+            })
+
 
         kwargs = {
             "bk_scope_type": "biz",
@@ -35,11 +53,11 @@ class SearchFileAPIView(APIView):
                 },
                 {
                     "name": "search_path",
-                    "value": request.query_params.get("search_path"),
+                    "value": search_path,
                 },
                 {
                     "name": "suffix",
-                    "value": request.query_params.get("suffix"),
+                    "value": suffix,
                 },
             ],
         }
@@ -60,7 +78,7 @@ class SearchFileAPIView(APIView):
             status = step_instance_list[0].get("status")
             if status == WAITING_CODE:
                 time.sleep(JOB_RESULT_ATTEMPTS_INTERVAL)
-            elif status == SUCCESS_CODE:
+            elif status == SUCCESS_CODE or status == FAILED_CODE:
                 break
             else:  # 既不是 WAITING 也不是 SUCCESS，就是失败
                 return Response({
@@ -91,11 +109,13 @@ class SearchFileAPIView(APIView):
 
         log_list = []
         for res in results:
-            if not res["is_success"] or not res["parsed_data"]:
-                continue
-            parsed_data = res["parsed_data"]
             bk_host_id = res["bk_host_id"]
-
+            if res["is_success"]:
+                parsed_data = res["parsed_data"]
+            else:
+                if res["log_content"] is None:
+                    res["log_content"] = "日志内容为空"
+                parsed_data = {"message": res["log_content"]}
             parsed_data["bk_host_id"] = bk_host_id
             log_list.append(parsed_data)
 
@@ -127,6 +147,26 @@ class BackupFileAPIView(APIView):
         search_path = request.data.get("search_path")
         suffix = request.data.get("suffix")
         backup_path = request.data.get("backup_path")
+
+        # 校验参数
+        if suffix not in ALLOW_FILE_SUFFIX:
+            return Response({
+                "result": False,
+                "code": WEB_SUCCESS_CODE,
+                "message": "文件后缀不合法",
+            })
+        if not search_path.startswith(tuple(ALLOW_PATH_PREFIX)) or ".." in search_path:
+            return Response({
+                "result": False,
+                "code": WEB_SUCCESS_CODE,
+                "message": "搜索路径不合法",
+            })
+        if not backup_path.startswith(tuple(ALLOW_PATH_PREFIX)) or ".." in backup_path:
+            return Response({
+                "result": False,
+                "code": WEB_SUCCESS_CODE,
+                "message": "备份路径不合法",
+            })
 
         # 执行作业计划
         kwargs = {
