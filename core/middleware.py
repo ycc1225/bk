@@ -5,26 +5,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# 这里的CMDB和JOB对应的名称应该同你的URL定义的前缀，详见 /home_application/urls.py
-
-CMDB_BEHAVIORS = [
-    'biz-list',
-    'set-list',
-    'module-list',
-    'host-list',
-    'host-detail',
-    'sync',
-    'sync-status'
-]
-
-JOB_BEHAVIORS = [
-    'search-file',
-    'backup-file',
-    'backup-jobs',
-    'backup-callback',
-    'backup-job-detail',
-]
-
 
 class RecordUserBehaviorMiddleware(MiddlewareMixin):
     """
@@ -36,24 +16,26 @@ class RecordUserBehaviorMiddleware(MiddlewareMixin):
             # 获取需要埋点存储的信息：用户名、请求的API名称、请求的API所属的类别（CMDB/JOB）
             username = request.user.username
 
-            # 路径格式：/api/biz-list/ -> 获取/api/之后的第一部分
-            # 例如：/api/biz-list/ -> biz-list, /api/biz-list/123/ -> biz-list, /api/search-file/?param=1 -> search-file
+            # 路径格式：/api/cmdb/biz-list/ -> 提取类别为 cmdb，接口名为 biz-list
+            # 路径格式：/api/job/backup-file/ -> 提取类别为 job，接口名为 backup-file
             path_clean = request.path.rstrip('/')
-            
-            # 分割路径并找到 /api/ 之后的部分
+
+            # 分割路径并提取类别和接口名
             path_parts = path_clean.split('/')
+            api_category = 'Unknown'
             api_name = ''
-            
-            # 找到 'api' 的索引，并获取其后的第一部分
+
+            # 找到 'api' 的索引，并获取其后的部分
             try:
                 api_index = path_parts.index('api')
+                # 获取类别（api 后的第一部分）
                 if api_index + 1 < len(path_parts):
-                    api_name = path_parts[api_index + 1]
+                    api_category = path_parts[api_index + 1].upper()  # cmdb -> CMDB, job -> JOB
+                # 获取接口名（api 后的第二部分）
+                if api_index + 2 < len(path_parts):
+                    api_name = path_parts[api_index + 2]
             except ValueError:
                 pass
-
-            # 判断接口所属类别
-            api_category = 'CMDB' if api_name in CMDB_BEHAVIORS else 'JOB' if api_name in JOB_BEHAVIORS else 'Unknown'
 
             # 判断是否为错误请求（4xx 或 5xx 状态码）或者返回码不为0
             is_error = response.status_code >= 400
