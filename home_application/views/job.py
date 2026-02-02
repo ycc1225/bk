@@ -125,7 +125,7 @@ class SearchFileAPIView(APIView):
             parsed_data["bk_host_id"] = bk_host_id
             log_list.append(parsed_data)
 
-        return ok_data(data=log_list)
+        return Response(ok_data(data=log_list))
 
 
 class BackupFileAPIView(APIView):
@@ -225,7 +225,7 @@ class BackupFileAPIView(APIView):
         ).apply_async()
 
         # 立即返回，不阻塞等待作业完成
-        return ok_data(data="备份作业已提交，正在后台处理")
+        return Response(ok_data(data="备份作业已提交，正在后台处理"))
 
 
 class BackupJobCallbackAPIView(APIView):

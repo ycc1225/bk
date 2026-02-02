@@ -145,6 +145,11 @@ LANGUAGES = (
     ("zh-hans", "简体中文"),
 )
 
+# DRF 配置
+REST_FRAMEWORK = {
+    "EXCEPTION_HANDLER": "home_application.utils.exception_handler.custom_exception_handler",
+}
+
 """
 以下为框架代码 请勿修改
 """
