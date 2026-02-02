@@ -2,6 +2,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from blueking.component.shortcuts import get_client_by_request
+from home_application.exceptions.cmdb import CmdbExecutionError
 
 
 class HostListAPIView(APIView):
@@ -55,19 +56,21 @@ class HostListAPIView(APIView):
 
         result = client.cc.list_biz_hosts(kwargs)
 
-        # 在返回结果中添加分页信息
-        if result.get("result"):
-            data = result.get("data", {})
-            # 计算总页数
-            total_count = data.get("count", 0)
+        if not result.get("result"):
+            raise CmdbExecutionError(result.get("message", "查询主机列表失败"))
 
-            # 添加分页信息到返回数据
-            data["pagination"] = {
-                "current": page,
-                "count": total_count,
-                "limit": page_size,
-            }
-            result["data"] = data
+        # 在返回结果中添加分页信息
+        data = result.get("data", {})
+        # 计算总页数
+        total_count = data.get("count", 0)
+
+        # 添加分页信息到返回数据
+        data["pagination"] = {
+            "current": page,
+            "count": total_count,
+            "limit": page_size,
+        }
+        result["data"] = data
 
         return Response(result)
 
@@ -84,4 +87,6 @@ class HostDetailAPIView(APIView):
         }
 
         result = client.cc.get_host_base_info(kwargs)
+        if not result.get("result"):
+            raise CmdbExecutionError(result.get("message", "查询主机详情失败"))
         return Response(result)

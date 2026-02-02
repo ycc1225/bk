@@ -1,6 +1,7 @@
 import json
 import time
 
+from blueapps.utils import ok_data
 from celery import chain
 from rest_framework import status
 from rest_framework.response import Response
@@ -21,7 +22,12 @@ from home_application.constants import (
     SEARCH_FILE_PLAN_ID,
     SUCCESS_CODE,
     WAITING_CODE,
-    WEB_SUCCESS_CODE,
+)
+from home_application.exceptions.job import (
+    JobExecutionError,
+    JobParameterError,
+    JobStatusError,
+    JobTimeoutError,
 )
 from home_application.models import BackupJob
 from home_application.services.job import batch_get_job_logs
@@ -44,21 +50,9 @@ class SearchFileAPIView(APIView):
 
         # 校验参数
         if suffix not in ALLOW_FILE_SUFFIX:
-            return Response(
-                {
-                    "result": False,
-                    "code": WEB_SUCCESS_CODE,
-                    "message": "文件后缀不合法",
-                }
-            )
+            raise JobParameterError("文件后缀不合法")
         if not search_path.startswith(tuple(ALLOW_PATH_PREFIX)) or ".." in search_path:
-            return Response(
-                {
-                    "result": False,
-                    "code": WEB_SUCCESS_CODE,
-                    "message": "搜索路径不合法",
-                }
-            )
+            raise JobParameterError("搜索路径不合法")
 
         kwargs = {
             "bk_scope_type": "biz",
@@ -101,23 +95,11 @@ class SearchFileAPIView(APIView):
             elif status == SUCCESS_CODE or status == FAILED_CODE:
                 break
             else:  # 既不是 WAITING 也不是 SUCCESS，就是失败
-                return Response(
-                    {
-                        "result": False,
-                        "code": WEB_SUCCESS_CODE,
-                        "message": "查询失败",
-                    }
-                )
+                raise JobStatusError("查询失败")
             attempts += 1
 
         if attempts == MAX_ATTEMPTS:
-            return Response(
-                {
-                    "result": False,
-                    "code": WEB_SUCCESS_CODE,
-                    "message": "查询超时",
-                }
-            )
+            raise JobTimeoutError("查询超时")
 
         step_instance_id = step_instance_list[0].get("step_instance_id")
 
@@ -143,13 +125,7 @@ class SearchFileAPIView(APIView):
             parsed_data["bk_host_id"] = bk_host_id
             log_list.append(parsed_data)
 
-        return Response(
-            {
-                "result": True,
-                "code": WEB_SUCCESS_CODE,
-                "data": log_list,
-            }
-        )
+        return ok_data(data=log_list)
 
 
 class BackupFileAPIView(APIView):
@@ -176,29 +152,11 @@ class BackupFileAPIView(APIView):
 
         # 校验参数
         if suffix not in ALLOW_FILE_SUFFIX:
-            return Response(
-                {
-                    "result": False,
-                    "code": WEB_SUCCESS_CODE,
-                    "message": "文件后缀不合法",
-                }
-            )
+            raise JobParameterError("文件后缀不合法")
         if not search_path.startswith(tuple(ALLOW_PATH_PREFIX)) or ".." in search_path:
-            return Response(
-                {
-                    "result": False,
-                    "code": WEB_SUCCESS_CODE,
-                    "message": "搜索路径不合法",
-                }
-            )
+            raise JobParameterError("搜索路径不合法")
         if not backup_path.startswith(tuple(ALLOW_PATH_PREFIX)) or ".." in backup_path:
-            return Response(
-                {
-                    "result": False,
-                    "code": WEB_SUCCESS_CODE,
-                    "message": "备份路径不合法",
-                }
-            )
+            raise JobParameterError("备份路径不合法")
 
         # 执行作业计划
         kwargs = {
@@ -228,24 +186,12 @@ class BackupFileAPIView(APIView):
             job_instance_id = job_response.get("data", {}).get("job_instance_id")
 
             if not job_instance_id:
-                return Response(
-                    {
-                        "result": False,
-                        "code": WEB_SUCCESS_CODE,
-                        "message": "执行作业失败，未返回job_instance_id",
-                    },
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
+                raise JobExecutionError("执行作业失败，未返回job_instance_id")
         except Exception as e:
             logger.error(f"执行作业异常: {str(e)}")
-            return Response(
-                {
-                    "result": False,
-                    "code": WEB_SUCCESS_CODE,
-                    "message": f"执行作业失败: {str(e)}",
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            if isinstance(e, (JobExecutionError, JobParameterError)):
+                raise e
+            raise JobExecutionError(f"执行作业失败: {str(e)}")
 
         # 生成作业链接
         bk_job_link = "{}/biz/{}/execute/task/{}".format(
@@ -279,13 +225,7 @@ class BackupFileAPIView(APIView):
         ).apply_async()
 
         # 立即返回，不阻塞等待作业完成
-        return Response(
-            {
-                "result": True,
-                "data": "备份作业已提交，正在后台处理",
-                "code": WEB_SUCCESS_CODE,
-            }
-        )
+        return ok_data(data="备份作业已提交，正在后台处理")
 
 
 class BackupJobCallbackAPIView(APIView):
