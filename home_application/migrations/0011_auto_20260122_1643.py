@@ -6,8 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('home_application', '0010_apirequestcount_error_count'),
+        ("home_application", "0010_apirequestcount_error_count"),
     ]
 
-    operations = [
-    ]
+    operations = []

@@ -1,8 +1,6 @@
-from blueapps.utils import ok, ok_data, failed
+from blueapps.utils import failed, ok_data
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.utils import timezone
-from datetime import timedelta
 
 from home_application.models import SyncStatus
 from home_application.serializers import SyncStatusSerializer
@@ -14,9 +12,9 @@ class BasicSyncAPIView(APIView):
         token = request.COOKIES.get("bk_token")
         if not token:
             return Response(failed(message="未授权"))
-        
+
         status, _ = SyncStatus.objects.get_or_create(name="basic_sync")
-        
+
         # 检查是否正在运行且未超时
         if status.last_status == "running":
             return Response(failed(message="同步中，请稍后再试"))
@@ -27,8 +25,9 @@ class BasicSyncAPIView(APIView):
         except Exception as e:
             status.mark_failed(f"任务启动失败: {str(e)}")
             return Response(failed(message="任务启动失败"))
-            
+
         return Response(ok_data())
+
 
 class TopoSyncAPIView(APIView):
     def get(self, request):
@@ -49,6 +48,7 @@ class TopoSyncAPIView(APIView):
             return Response(failed(message="任务启动失败"))
 
         return Response(ok_data())
+
 
 class SyncStatusAPIView(APIView):
     def get(self, request):

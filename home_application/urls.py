@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tencent is pleased to support the open source community by making 蓝鲸智云PaaS平台社区版 (BlueKing PaaS Community
 Edition) available.
@@ -15,7 +14,7 @@ from django.conf.urls import include, url
 
 urlpatterns = (
     # CMDB 相关 API
-    url(r'^cmdb/', include('home_application.cmdb_urls')),
+    url(r"^cmdb/", include("home_application.cmdb_urls")),
     # JOB 相关 API
-    url(r'^job/', include('home_application.job_urls')),
+    url(r"^job/", include("home_application.job_urls")),
 )

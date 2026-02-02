@@ -6,13 +6,13 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('home_application', '0004_backuprecord_file_path'),
+        ("home_application", "0004_backuprecord_file_path"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='backuprecord',
-            old_name='file_path',
-            new_name='bk_backup_name',
+            model_name="backuprecord",
+            old_name="file_path",
+            new_name="bk_backup_name",
         ),
     ]

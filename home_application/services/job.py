@@ -1,5 +1,6 @@
 import json
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,7 +22,10 @@ def batch_get_job_logs(client, job_instance_id, step_instance_id, host_id_list, 
         response = client.jobv3.batch_get_job_instance_ip_log(**data)
 
         # 调试日志
-        logger.info(f"batch_get_job_instance_ip_log response keys: {response.keys() if isinstance(response, dict) else type(response)}")
+        logger.info(
+            f"batch_get_job_instance_ip_log response keys:"
+            f"{response.keys() if isinstance(response, dict) else type(response)}"
+        )
 
         response_data = response.get("data")
         logs_list = response_data.get("script_task_logs")
@@ -52,12 +56,14 @@ def batch_get_job_logs(client, job_instance_id, step_instance_id, host_id_list, 
                 except json.JSONDecodeError:
                     logger.warning(f"日志内容不是有效的 JSON: host={bk_host_id}, content={log_content[:100]}")
 
-            results.append({
-                "bk_host_id": bk_host_id,
-                "is_success": is_success,
-                "log_content": log_content,
-                "parsed_data": parsed_data
-            })
+            results.append(
+                {
+                    "bk_host_id": bk_host_id,
+                    "is_success": is_success,
+                    "log_content": log_content,
+                    "parsed_data": parsed_data,
+                }
+            )
 
     except Exception as e:
         logger.error(f"批量获取日志异常: job={job_instance_id}, error={e}")

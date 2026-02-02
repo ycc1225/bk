@@ -6,16 +6,16 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('home_application', '0002_delete_helloworld'),
+        ("home_application", "0002_delete_helloworld"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='backuprecord',
-            name='file_path',
+            model_name="backuprecord",
+            name="file_path",
         ),
         migrations.RemoveField(
-            model_name='backuprecord',
-            name='file_size',
+            model_name="backuprecord",
+            name="file_size",
         ),
     ]

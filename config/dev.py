@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tencent is pleased to support the open source community by making 蓝鲸智云PaaS平台社区版 (BlueKing PaaS Community
 Edition) available.
@@ -10,13 +9,13 @@ Unless required by applicable law or agreed to in writing, software distributed 
 an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
 specific language governing permissions and limitations under the License.
 """
-import os
+
+import pymysql
+from blueapps.conf.validators import EnvValidator
 
 from config import RUN_VER
 from config.default import FRONTEND_BACKEND_SEPARATION
-from blueapps.conf.validators import EnvValidator
 
-import pymysql
 pymysql.install_as_MySQLdb()
 
 EnvValidator(RUN_VER).validate()
@@ -45,7 +44,7 @@ STATIC_URL = "/static/"
 # Celery 消息队列设置 Redis
 BROKER_URL = "redis://localhost:6379/0"
 BROKER_TRANSPORT_OPTIONS = {
-    'global_keyprefix': f'{APP_CODE}_celery_',  # 消息队列键前缀
+    "global_keyprefix": f"{APP_CODE}_celery_",  # 消息队列键前缀
 }
 
 

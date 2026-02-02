@@ -3,16 +3,17 @@ import logging
 
 from django.db import transaction
 
-from home_application.models import BizInfo, SetInfo, ModuleInfo, SyncStatus
+from home_application.models import BizInfo, ModuleInfo, SetInfo, SyncStatus
 from home_application.services.cmdb_api_client import CMDBApiClient
 from home_application.services.cmdb_client import CMDBClient
 
 logger = logging.getLogger(__name__)
 
+
 class BasicCMDBSyncService:
     STATUS_NAME = "basic_sync"
 
-    def __init__(self,token=None):
+    def __init__(self, token=None):
         if token:
             self.client = CMDBClient(token=token)
         else:
@@ -32,7 +33,7 @@ class BasicCMDBSyncService:
             self.status.mark_success()
 
     def sync_biz(self):
-        biz_list = self.client.get_biz()['data']['info']
+        biz_list = self.client.get_biz()["data"]["info"]
 
         return self._save_to_database(
             config={
@@ -49,7 +50,7 @@ class BasicCMDBSyncService:
         data_list = []
 
         for biz in BizInfo.objects.all():
-            set_list = self.client.get_set(biz.bk_biz_id)['data']['info']
+            set_list = self.client.get_set(biz.bk_biz_id)["data"]["info"]
             for s in set_list:
                 data_list.append(s)
 
@@ -69,9 +70,7 @@ class BasicCMDBSyncService:
         data_list = []
 
         for s in SetInfo.objects.all():
-            module_list = self.client.get_module(
-                s.bk_biz_id, s.bk_set_id
-            )['data']['info']
+            module_list = self.client.get_module(s.bk_biz_id, s.bk_set_id)["data"]["info"]
             for m in module_list:
                 data_list.append(m)
 
@@ -88,13 +87,10 @@ class BasicCMDBSyncService:
             data_list=data_list,
         )
 
-
-
-
     def _save_to_database(
-            self,
-            config: dict,
-            data_list: list,
+        self,
+        config: dict,
+        data_list: list,
     ) -> dict:
         """
         将 CMDB 数据保存到数据库
@@ -132,9 +128,7 @@ class BasicCMDBSyncService:
                     )
                     saved_count += 1
 
-            logger.info(
-                f"成功保存 {saved_count} 条 {model_class.__name__} 数据"
-            )
+            logger.info(f"成功保存 {saved_count} 条 {model_class.__name__} 数据")
 
             return {
                 "success": True,
@@ -143,9 +137,7 @@ class BasicCMDBSyncService:
             }
 
         except Exception as e:
-            logger.exception(
-                f"保存 {model_class.__name__} 数据失败"
-            )
+            logger.exception(f"保存 {model_class.__name__} 数据失败")
             return {
                 "success": False,
                 "message": str(e),

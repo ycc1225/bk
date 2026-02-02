@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tencent is pleased to support the open source community by making 蓝鲸智云PaaS平台社区版 (BlueKing PaaS Community
 Edition) available.
@@ -14,14 +13,15 @@ specific language governing permissions and limitations under the License.
 from django.db import models
 from django.utils import timezone
 
-
 # Create your models here.
+
 
 class BizInfo(models.Model):
     """
     业务信息
     """
-    bk_biz_id = models.IntegerField(unique=True,db_index=True)
+
+    bk_biz_id = models.IntegerField(unique=True, db_index=True)
     bk_biz_name = models.CharField(max_length=50)
 
 
@@ -29,7 +29,8 @@ class SetInfo(models.Model):
     """
     集群信息
     """
-    bk_set_id = models.IntegerField(unique=True,db_index=True)
+
+    bk_set_id = models.IntegerField(unique=True, db_index=True)
     bk_set_name = models.CharField(max_length=100)
     bk_biz_id = models.IntegerField(db_index=True)
 
@@ -38,17 +39,19 @@ class ModuleInfo(models.Model):
     """
     模块信息
     """
-    bk_module_id = models.IntegerField(unique=True,db_index=True)
+
+    bk_module_id = models.IntegerField(unique=True, db_index=True)
     bk_module_name = models.CharField(max_length=100)
     bk_set_id = models.IntegerField(db_index=True)
     bk_biz_id = models.IntegerField(db_index=True)
+
 
 class SyncStatus(models.Model):
     name = models.CharField(max_length=50, unique=True)
     last_sync_at = models.DateTimeField(null=True)
     last_status = models.CharField(
         max_length=20,
-        choices=(("success", "success"), ("failed", "failed"), ("pending", "pending"),("running", "running")),
+        choices=(("success", "success"), ("failed", "failed"), ("pending", "pending"), ("running", "running")),
         null=True,
     )
     last_error = models.TextField(null=True, blank=True)
@@ -94,47 +97,51 @@ class BackupJob(models.Model):
     suffix = models.CharField(max_length=255)  # 文件后缀
     backup_path = models.TextField()  # 备份路径
     bk_job_link = models.TextField()  # 作业链接
-    status = models.CharField(max_length=50, choices=Status.CHOICES, default=Status.PENDING)  # 整体状态：success/failed/pending/processing
+    status = models.CharField(
+        max_length=50, choices=Status.CHOICES, default=Status.PENDING
+    )  # 整体状态：success/failed/pending/processing
     host_count = models.IntegerField(default=0)  # 主机数量
     file_count = models.IntegerField(default=0)  # 文件总数
     created_at = models.DateTimeField(auto_now_add=True)  # 创建时间
 
     class Meta:
-        ordering = ['-id']
+        ordering = ["-id"]
 
     def mark_processing(self):
         self.status = self.Status.PROCESSING
-        self.save(update_fields=['status'])
+        self.save(update_fields=["status"])
 
     def mark_success(self, file_count=None):
         self.status = self.Status.SUCCESS
         if file_count is not None:
             self.file_count = file_count
-            self.save(update_fields=['status', 'file_count'])
+            self.save(update_fields=["status", "file_count"])
         else:
-            self.save(update_fields=['status'])
+            self.save(update_fields=["status"])
 
     def mark_failed(self):
         self.status = self.Status.FAILED
-        self.save(update_fields=['status'])
+        self.save(update_fields=["status"])
 
     def mark_partial(self, file_count=None):
         self.status = self.Status.PARTIAL
         if file_count is not None:
             self.file_count = file_count
-            self.save(update_fields=['status', 'file_count'])
+            self.save(update_fields=["status", "file_count"])
         else:
-            self.save(update_fields=['status'])
+            self.save(update_fields=["status"])
+
 
 # 从表：备份记录（主机+文件）
 class BackupRecord(models.Model):
-    backup_job = models.ForeignKey(BackupJob, on_delete=models.CASCADE, related_name='records')
+    backup_job = models.ForeignKey(BackupJob, on_delete=models.CASCADE, related_name="records")
     bk_host_id = models.IntegerField()  # 主机ID
     status = models.CharField(max_length=50)  # 文件状态
     bk_backup_name = models.CharField(max_length=1024)
 
     class Meta:
-        ordering = ['-id']
+        ordering = ["-id"]
+
 
 class ApiRequestCount(models.Model):
     """

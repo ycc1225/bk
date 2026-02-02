@@ -6,12 +6,12 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('home_application', '0006_backuprecord_bk_file_create_time'),
+        ("home_application", "0006_backuprecord_bk_file_create_time"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='backuprecord',
-            name='bk_file_create_time',
+            model_name="backuprecord",
+            name="bk_file_create_time",
         ),
     ]

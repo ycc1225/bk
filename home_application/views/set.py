@@ -14,8 +14,7 @@ class SetInfoViewSet(ReadOnlyModelViewSet):
         if not biz_id:
             return SetInfo.objects.none()
         return SetInfo.objects.filter(bk_biz_id=biz_id).order_by("bk_set_id")
+
     def list(self, request, *args, **kwargs):
-        data = {
-            "info": self.get_serializer(self.get_queryset(), many=True).data
-        }
+        data = {"info": self.get_serializer(self.get_queryset(), many=True).data}
         return Response(ok_data(data))

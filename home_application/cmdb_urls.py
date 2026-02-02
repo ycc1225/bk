@@ -1,15 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 CMDB 相关 API 路由配置
 """
 
 from django.conf.urls import url
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from home_application.views.sync import TopoSyncAPIView, SyncStatusAPIView
-from .views.host import HostDetailAPIView, HostListAPIView
+from home_application.views.sync import SyncStatusAPIView, TopoSyncAPIView
+
 from .views.biz import BizInfoViewSet
+from .views.host import HostDetailAPIView, HostListAPIView
 from .views.module import ModuleInfoViewSet
 from .views.set import SetInfoViewSet
 

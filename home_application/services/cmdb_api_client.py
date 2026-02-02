@@ -1,9 +1,15 @@
-import json
 import logging
+
 import requests
 from requests import RequestException
 
-from home_application.constants import API_AUTH_HEADER, API_ENDPOINTS, SUPPLIER_ACCOUNT, CMDB_BASE_URL, DATA_CONFIGS
+from home_application.constants import (
+    API_AUTH_HEADER,
+    API_ENDPOINTS,
+    CMDB_BASE_URL,
+    DATA_CONFIGS,
+    SUPPLIER_ACCOUNT,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +22,7 @@ class CMDBApiClient:
         try:
             response = requests.post(url, json=payload, headers=self.headers)
             response.raise_for_status()
-            
+
             data = response.json()
             if data.get("result", False) and "data" in data:
                 result_data = data["data"]["info"]
@@ -33,22 +39,18 @@ class CMDBApiClient:
             raise
 
     def get_biz(self):
-        url = CMDB_BASE_URL + API_ENDPOINTS['biz'].format(supplier_account=SUPPLIER_ACCOUNT)
-        payload = {
-            "fields": DATA_CONFIGS['biz']['fields']
-        }
+        url = CMDB_BASE_URL + API_ENDPOINTS["biz"].format(supplier_account=SUPPLIER_ACCOUNT)
+        payload = {"fields": DATA_CONFIGS["biz"]["fields"]}
         return self._send_request(url, payload)
 
     def get_set(self, bk_biz_id):
-        url = CMDB_BASE_URL + API_ENDPOINTS['set'].format(supplier_account=SUPPLIER_ACCOUNT, bk_biz_id=bk_biz_id)
-        payload = {
-            "fields": DATA_CONFIGS['set']['fields']
-        }
+        url = CMDB_BASE_URL + API_ENDPOINTS["set"].format(supplier_account=SUPPLIER_ACCOUNT, bk_biz_id=bk_biz_id)
+        payload = {"fields": DATA_CONFIGS["set"]["fields"]}
         return self._send_request(url, payload)
 
     def get_module(self, bk_biz_id, bk_set_id):
-        url = CMDB_BASE_URL + API_ENDPOINTS['module'].format(supplier_account=SUPPLIER_ACCOUNT, bk_biz_id=bk_biz_id, bk_set_id=bk_set_id)
-        payload = {
-            "fields": DATA_CONFIGS['module']['fields']
-        }
+        url = CMDB_BASE_URL + API_ENDPOINTS["module"].format(
+            supplier_account=SUPPLIER_ACCOUNT, bk_biz_id=bk_biz_id, bk_set_id=bk_set_id
+        )
+        payload = {"fields": DATA_CONFIGS["module"]["fields"]}
         return self._send_request(url, payload)

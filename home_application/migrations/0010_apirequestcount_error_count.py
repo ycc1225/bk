@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('home_application', '0009_auto_20260112_1552'),
+        ("home_application", "0009_auto_20260112_1552"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='apirequestcount',
-            name='error_count',
-            field=models.IntegerField(default=0, verbose_name='错误请求次数'),
+            model_name="apirequestcount",
+            name="error_count",
+            field=models.IntegerField(default=0, verbose_name="错误请求次数"),
         ),
     ]

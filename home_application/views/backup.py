@@ -16,7 +16,7 @@ class BackupJobListAPIView(APIView):
         start = (page - 1) * page_size
 
         total_count = BackupJob.objects.count()
-        jobs = BackupJob.objects.all()[start:start + page_size]
+        jobs = BackupJob.objects.all()[start : start + page_size]
 
         res_data = {
             "result": True,
@@ -25,7 +25,7 @@ class BackupJobListAPIView(APIView):
                 "count": total_count,
                 "current": page,
                 "page_size": page_size,
-            }
+            },
         }
         return Response(res_data)
 
@@ -43,10 +43,7 @@ class BackupJobDetailAPIView(APIView):
         # 按主机分组
         host_files = defaultdict(list)
         for record in records:
-            host_files[record.bk_host_id].append({
-                "file_path": record.bk_backup_name,
-                "status": record.status
-            })
+            host_files[record.bk_host_id].append({"file_path": record.bk_backup_name, "status": record.status})
 
         res_data = {
             "result": True,
@@ -64,7 +61,7 @@ class BackupJobDetailAPIView(APIView):
                     "file_count": job.file_count,
                     "created_at": job.created_at.strftime("%Y-%m-%d %H:%M:%S"),
                 },
-                "host_files": dict(host_files)
-            }
+                "host_files": dict(host_files),
+            },
         }
         return Response(res_data)

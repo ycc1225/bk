@@ -6,14 +6,14 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('home_application', '0003_auto_20260106_1714'),
+        ("home_application", "0003_auto_20260106_1714"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='backuprecord',
-            name='file_path',
-            field=models.CharField(default='undefined', max_length=1024),
+            model_name="backuprecord",
+            name="file_path",
+            field=models.CharField(default="undefined", max_length=1024),
             preserve_default=False,
         ),
     ]

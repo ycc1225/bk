@@ -1,12 +1,16 @@
+import logging
+
 from celery import shared_task
 from django.db.models import F
 
 from home_application.models import ApiRequestCount
-from home_application.utils.redis_utils import fetch_api_counts_and_rename, delete_redis_key
-
-import logging
+from home_application.utils.redis_utils import (
+    delete_redis_key,
+    fetch_api_counts_and_rename,
+)
 
 logger = logging.getLogger(__name__)
+
 
 @shared_task
 def record_api_request_task(username, api_category, api_name, is_error=False, date=None):
@@ -15,14 +19,13 @@ def record_api_request_task(username, api_category, api_name, is_error=False, da
     """
     try:
         from django.utils import timezone
+
         if date is None:
             date = timezone.now().date()
 
         # 根据 api_category, api_name 和 date 记录请求次数
         api_request_count, created = ApiRequestCount.objects.get_or_create(
-            api_category=api_category,
-            api_name=api_name,
-            date=date
+            api_category=api_category, api_name=api_name, date=date
         )
 
         if is_error:
@@ -34,10 +37,7 @@ def record_api_request_task(username, api_category, api_name, is_error=False, da
 
         api_request_count.save()
     except Exception as e:
-        logger.error(
-            f"异步记录用户行为失败: 用户={username}, 类别={api_category}, "
-            f"接口={api_name}, 错误={str(e)}"
-        )
+        logger.error(f"异步记录用户行为失败: 用户={username}, 类别={api_category}, " f"接口={api_name}, 错误={str(e)}")
         pass
 
 
@@ -59,8 +59,8 @@ def sync_api_counts_task():
         count = 0
         try:
             for (date_str, category, name), stats in data.items():
-                req_count = stats.get('req', 0)
-                err_count = stats.get('err', 0)
+                req_count = stats.get("req", 0)
+                err_count = stats.get("err", 0)
 
                 if req_count == 0 and err_count == 0:
                     continue
@@ -69,16 +69,14 @@ def sync_api_counts_task():
                 # 使用 update_or_create 或者 get_or_create + F 表达式
 
                 obj, created = ApiRequestCount.objects.get_or_create(
-                    api_category=category,
-                    api_name=name,
-                    date=date_str
+                    api_category=category, api_name=name, date=date_str
                 )
 
                 # 使用 F 表达式原子更新
                 if req_count > 0:
-                    obj.request_count = F('request_count') + req_count
+                    obj.request_count = F("request_count") + req_count
                 if err_count > 0:
-                    obj.error_count = F('error_count') + err_count
+                    obj.error_count = F("error_count") + err_count
 
                 obj.save()
                 count += 1

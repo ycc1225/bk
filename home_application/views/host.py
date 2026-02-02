@@ -6,7 +6,6 @@ from blueking.component.shortcuts import get_client_by_request
 
 class HostListAPIView(APIView):
     def get(self, request):
-
         """
         根据传递的查询条件，包括但不限于（业务ID、集群ID、模块ID、主机ID、主机维护人）
         查询主机列表
@@ -14,13 +13,13 @@ class HostListAPIView(APIView):
         client = get_client_by_request(request)
 
         # 获取分页参数，设置默认值
-        page = int(request.GET.get('page', 1))
-        page_size = int(request.GET.get('page_size', 10))
+        page = int(request.GET.get("page", 1))
+        page_size = int(request.GET.get("page_size", 10))
         start = (page - 1) * page_size
 
         # 构造请求函数
         kwargs = {
-            "bk_biz_id": request.GET.get('bk_biz_id'),
+            "bk_biz_id": request.GET.get("bk_biz_id"),
             "page": {
                 "start": start,
                 "limit": page_size,
@@ -42,30 +41,17 @@ class HostListAPIView(APIView):
 
         rules = []  # 额外的查询参数，配置查询规则，参数参考API文档
         if request.GET.get("operator"):
-            rules.append({
-                "field": "operator",
-                "operator": "contains",
-                "value": request.GET.get("operator")
-            })
+            rules.append({"field": "operator", "operator": "contains", "value": request.GET.get("operator")})
         if request.GET.get("bk_host_id"):
-            rules.append({
-                "field": "bk_host_id",
-                "operator": "equal",
-                "value": int(request.GET.get("bk_host_id"))
-            })
+            rules.append({"field": "bk_host_id", "operator": "equal", "value": int(request.GET.get("bk_host_id"))})
         if request.GET.get("bk_host_innerip"):
-            rules.append({
-                "field": "bk_host_innerip",
-                "operator": "contains",
-                "value": request.GET.get("bk_host_innerip")
-            })
+            rules.append(
+                {"field": "bk_host_innerip", "operator": "contains", "value": request.GET.get("bk_host_innerip")}
+            )
 
         #  将额外的查询添加进过滤器中
         if rules:
-            kwargs["host_property_filter"] = {
-                "condition": "AND",
-                "rules": rules
-            }
+            kwargs["host_property_filter"] = {"condition": "AND", "rules": rules}
 
         result = client.cc.list_biz_hosts(kwargs)
 
@@ -85,8 +71,9 @@ class HostListAPIView(APIView):
 
         return Response(result)
 
+
 class HostDetailAPIView(APIView):
-    def get(self,request):
+    def get(self, request):
         """
         根据主机ID，查询主机详情信息
         """

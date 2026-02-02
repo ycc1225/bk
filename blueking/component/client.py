@@ -1,15 +1,14 @@
-# -*- coding: utf-8 -*-
-"""Component API Client
-"""
-import requests
-import json
-import time
-import random
-import logging
+"""Component API Client"""
 
+import json
+import logging
+import random
+import time
+
+import requests
+
+from . import collections, conf
 from .compat import urlparse
-from . import conf
-from . import collections
 from .utils import get_signature
 
 # shutdown urllib3's warning
@@ -22,7 +21,7 @@ except Exception:
 logger = logging.getLogger("component")
 
 
-class BaseComponentClient(object):
+class BaseComponentClient:
     """Base client class for component"""
 
     @classmethod
@@ -107,7 +106,7 @@ class BaseComponentClient(object):
 
     def __getattr__(self, key):
         if key not in self.available_collections:
-            return getattr(super(BaseComponentClient, self), key)
+            return getattr(super(), key)
 
         if key not in self._cached_collections:
             collection = self.available_collections[key]

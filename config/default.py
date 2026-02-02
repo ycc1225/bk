@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tencent is pleased to support the open source community by making 蓝鲸智云PaaS平台社区版 (BlueKing PaaS Community
 Edition) available.
@@ -32,7 +31,6 @@ from blueapps.conf.log import get_logging_config_dict
 # )
 
 
-
 # 这里是默认的中间件，大部分情况下，不需要改动
 # 如果你已经了解每个默认 MIDDLEWARE 的作用，确实需要去掉某些 MIDDLEWARE，或者改动先后顺序，请去掉下面的注释，然后修改
 # MIDDLEWARE = (
@@ -60,10 +58,10 @@ from blueapps.conf.log import get_logging_config_dict
 
 # 请在这里加入你的自定义 APP
 INSTALLED_APPS += (  # noqa
-    "corsheaders",          # 添加这一行，解决CORS跨域资源共享问题
-    "rest_framework",       # Django REST Framework
-    "django_filters",       # Django REST Framework 过滤器
-    "drf_yasg",             # Swagger API 文档生成工具
+    "corsheaders",  # 添加这一行，解决CORS跨域资源共享问题
+    "rest_framework",  # Django REST Framework
+    "django_filters",  # Django REST Framework 过滤器
+    "drf_yasg",  # Swagger API 文档生成工具
     "home_application",
     "mako_application",
 )
@@ -80,7 +78,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 # CORS白名单，需要配置环境变量，线上需要在开发者中心->应用开发->应用引擎->环境配置中添加环境变量
 CORS_ALLOWED_ORIGINS = [
-    os.getenv('CORS_ALLOWED_ORIGIN'),     # 允许跨域的域名
+    os.getenv("CORS_ALLOWED_ORIGIN"),  # 允许跨域的域名
 ]
 
 # 默认数据库AUTO字段类型
@@ -143,8 +141,8 @@ TIME_ZONE = "Asia/Shanghai"
 LANGUAGE_CODE = "zh-hans"
 
 LANGUAGES = (
-    ("en", u"English"),
-    ("zh-hans", u"简体中文"),
+    ("en", "English"),
+    ("zh-hans", "简体中文"),
 )
 
 """
@@ -180,6 +178,4 @@ if locals().get("DISABLED_APPS"):
     for _app, _key in itertools.product(DISABLED_APPS, _keys):
         if locals().get(_key) is None:
             continue
-        locals()[_key] = tuple(
-            [_item for _item in locals()[_key] if not _item.startswith(_app + ".")]
-        )
+        locals()[_key] = tuple([_item for _item in locals()[_key] if not _item.startswith(_app + ".")])

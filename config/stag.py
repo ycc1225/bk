@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tencent is pleased to support the open source community by making 蓝鲸智云PaaS平台社区版 (BlueKing PaaS Community
 Edition) available.
@@ -10,6 +9,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
 specific language governing permissions and limitations under the License.
 """
+
 from config import RUN_VER
 from config.default import FRONTEND_BACKEND_SEPARATION
 
@@ -54,6 +54,5 @@ REDIS_PORT = int(os.environ.get("REDIS_PORT"))
 REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
 BROKER_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/11"
 BROKER_TRANSPORT_OPTIONS = {
-    'global_keyprefix': f'{APP_CODE}_celery_',  # 消息队列键前缀
+    "global_keyprefix": f"{APP_CODE}_celery_",  # 消息队列键前缀
 }
-

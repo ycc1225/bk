@@ -6,49 +6,52 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('home_application', '0013_auto_20260122_1652'),
+        ("home_application", "0013_auto_20260122_1652"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='SyncStatus',
+            name="SyncStatus",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50, unique=True)),
-                ('last_sync_at', models.DateTimeField(null=True)),
-                ('last_status', models.CharField(choices=[('success', 'success'), ('failed', 'failed')], max_length=20, null=True)),
-                ('last_error', models.TextField(blank=True, null=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=50, unique=True)),
+                ("last_sync_at", models.DateTimeField(null=True)),
+                (
+                    "last_status",
+                    models.CharField(choices=[("success", "success"), ("failed", "failed")], max_length=20, null=True),
+                ),
+                ("last_error", models.TextField(blank=True, null=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
         ),
         migrations.AlterField(
-            model_name='bizinfo',
-            name='bk_biz_id',
+            model_name="bizinfo",
+            name="bk_biz_id",
             field=models.IntegerField(db_index=True, unique=True),
         ),
         migrations.AlterField(
-            model_name='moduleinfo',
-            name='bk_biz_id',
+            model_name="moduleinfo",
+            name="bk_biz_id",
             field=models.IntegerField(db_index=True),
         ),
         migrations.AlterField(
-            model_name='moduleinfo',
-            name='bk_module_id',
+            model_name="moduleinfo",
+            name="bk_module_id",
             field=models.IntegerField(db_index=True, unique=True),
         ),
         migrations.AlterField(
-            model_name='moduleinfo',
-            name='bk_set_id',
+            model_name="moduleinfo",
+            name="bk_set_id",
             field=models.IntegerField(db_index=True),
         ),
         migrations.AlterField(
-            model_name='setinfo',
-            name='bk_biz_id',
+            model_name="setinfo",
+            name="bk_biz_id",
             field=models.IntegerField(db_index=True),
         ),
         migrations.AlterField(
-            model_name='setinfo',
-            name='bk_set_id',
+            model_name="setinfo",
+            name="bk_set_id",
             field=models.IntegerField(db_index=True, unique=True),
         ),
     ]

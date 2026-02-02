@@ -17,10 +17,8 @@ class ModuleInfoViewSet(ReadOnlyModelViewSet):
         if not biz_id and not set_id:
             return ModuleInfo.objects.none()
 
-        return ModuleInfo.objects.filter(bk_biz_id=biz_id,bk_set_id=set_id).order_by("bk_module_id")
+        return ModuleInfo.objects.filter(bk_biz_id=biz_id, bk_set_id=set_id).order_by("bk_module_id")
 
     def list(self, request, *args, **kwargs):
-        data = {
-            "info": self.get_serializer(self.get_queryset(), many=True).data
-        }
+        data = {"info": self.get_serializer(self.get_queryset(), many=True).data}
         return Response(ok_data(data))

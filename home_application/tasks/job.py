@@ -1,12 +1,16 @@
-# -*- coding: utf-8 -*-
 import logging
+
 from celery import shared_task
-from config import APP_CODE, SECRET_KEY
+
 from blueking.component import client as component_client
-from home_application.models import BackupJob, BackupRecord
+from config import APP_CODE, SECRET_KEY
 from home_application.constants import (
-    WAITING_CODE, SUCCESS_CODE, JOB_RESULT_ATTEMPTS_INTERVAL, MAX_ATTEMPTS
+    JOB_RESULT_ATTEMPTS_INTERVAL,
+    MAX_ATTEMPTS,
+    SUCCESS_CODE,
+    WAITING_CODE,
 )
+from home_application.models import BackupJob, BackupRecord
 from home_application.services.job import batch_get_job_logs
 
 logger = logging.getLogger(__name__)
@@ -16,11 +20,7 @@ def get_esb_client(bk_token):
     """
     获取 ESB Client
     """
-    return component_client.ComponentClient(
-        APP_CODE,
-        SECRET_KEY,
-        common_args={"bk_token": bk_token}
-    )
+    return component_client.ComponentClient(APP_CODE, SECRET_KEY, common_args={"bk_token": bk_token})
 
 
 @shared_task(bind=True)
@@ -50,11 +50,13 @@ def poll_job_status(self, job_instance_id, bk_biz_id, bk_token):
 
         if step_status == WAITING_CODE:
             # 作业正在运行中，进行重试
-            raise self.retry(exc=Exception(f"Job {job_instance_id} is still running"),
-                             countdown=JOB_RESULT_ATTEMPTS_INTERVAL,
-                             max_retries=MAX_ATTEMPTS)
+            raise self.retry(
+                exc=Exception(f"Job {job_instance_id} is still running"),
+                countdown=JOB_RESULT_ATTEMPTS_INTERVAL,
+                max_retries=MAX_ATTEMPTS,
+            )
 
-        is_success = (step_status == SUCCESS_CODE)
+        is_success = step_status == SUCCESS_CODE
 
         return {
             "is_finished": True,
@@ -62,7 +64,7 @@ def poll_job_status(self, job_instance_id, bk_biz_id, bk_token):
             "job_instance_id": job_instance_id,
             "step_instance_id": step_instance_id,
             "bk_biz_id": bk_biz_id,
-            "status": step_status
+            "status": step_status,
         }
 
     except Exception as e:
@@ -84,28 +86,21 @@ def fetch_job_logs(job_status_result, host_id_list, bk_token):
 
     # 如果作业本身失败，直接传递失败状态
     if not is_success:
-        return {
-            "is_job_success": False,
-            "job_instance_id": job_instance_id,
-            "results": []
-        }
+        return {"is_job_success": False, "job_instance_id": job_instance_id, "results": []}
 
     client = get_esb_client(bk_token)
-    
+
     # 调用公共函数
     results = batch_get_job_logs(
         client=client,
         job_instance_id=job_instance_id,
         step_instance_id=step_instance_id,
         host_id_list=host_id_list,
-        bk_biz_id=bk_biz_id
+        bk_biz_id=bk_biz_id,
     )
 
-    return {
-        "is_job_success": True,
-        "job_instance_id": job_instance_id,
-        "results": results
-    }
+    return {"is_job_success": True, "job_instance_id": job_instance_id, "results": results}
+
 
 @shared_task
 def process_backup_results(fetch_logs_result):
@@ -165,4 +160,6 @@ def process_backup_results(fetch_logs_result):
     else:
         backup_job.mark_partial(file_count=total_files)
 
-    logger.info(f"作业处理完成: job={job_instance_id}, success={success_hosts}, failed={failed_hosts}, files={total_files}")
+    logger.info(
+        f"作业处理完成: job={job_instance_id}, success={success_hosts}, failed={failed_hosts}, files={total_files}"
+    )

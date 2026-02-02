@@ -1,3 +1,3 @@
-from .job import *
-from .cmdb_sync import *
-from .api_count import *
+from .api_count import *  # noqa
+from .cmdb_sync import *  # noqa
+from .job import *  # noqa

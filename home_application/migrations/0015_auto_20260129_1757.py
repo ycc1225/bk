@@ -6,18 +6,32 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('home_application', '0014_auto_20260126_1752'),
+        ("home_application", "0014_auto_20260126_1752"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='backupjob',
-            name='status',
-            field=models.CharField(choices=[('pending', 'pending'), ('processing', 'processing'), ('success', 'success'), ('failed', 'failed'), ('partial', 'partial')], default='pending', max_length=50),
+            model_name="backupjob",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("pending", "pending"),
+                    ("processing", "processing"),
+                    ("success", "success"),
+                    ("failed", "failed"),
+                    ("partial", "partial"),
+                ],
+                default="pending",
+                max_length=50,
+            ),
         ),
         migrations.AlterField(
-            model_name='syncstatus',
-            name='last_status',
-            field=models.CharField(choices=[('success', 'success'), ('failed', 'failed'), ('pending', 'pending'), ('running', 'running')], max_length=20, null=True),
+            model_name="syncstatus",
+            name="last_status",
+            field=models.CharField(
+                choices=[("success", "success"), ("failed", "failed"), ("pending", "pending"), ("running", "running")],
+                max_length=20,
+                null=True,
+            ),
         ),
     ]

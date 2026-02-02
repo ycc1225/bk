@@ -1,5 +1,3 @@
-import os
-
 from blueking.component import client as component_client
 from blueking.component.shortcuts import get_client_by_request
 from config import APP_CODE, SECRET_KEY
@@ -11,36 +9,23 @@ class CMDBClient:
         if request:
             self.client = get_client_by_request(request)
         elif token:
-            self.client = component_client.ComponentClient(
-                APP_CODE,
-                SECRET_KEY,
-                common_args={"bk_token": token}
-            )
+            self.client = component_client.ComponentClient(APP_CODE, SECRET_KEY, common_args={"bk_token": token})
         else:
             raise ValueError("Either request or token must be provided")
 
     def get_biz(self):
-        kwargs = {
-            "fields": DATA_CONFIGS['biz']['fields']
-        }
+        kwargs = {"fields": DATA_CONFIGS["biz"]["fields"]}
         return self.client.cc.search_business(kwargs)
 
     def get_set(self, biz_id: int):
-        kwargs = {
-            "bk_biz_id": biz_id,
-            "fields": DATA_CONFIGS['set']['fields']
-        }
+        kwargs = {"bk_biz_id": biz_id, "fields": DATA_CONFIGS["set"]["fields"]}
         return self.client.cc.search_set(kwargs)
 
     def get_module(self, biz_id: int, set_id: int):
-        kwargs = {
-            "bk_biz_id": biz_id,
-            "bk_set_id": set_id,
-            "fields": DATA_CONFIGS['module']['fields']
-        }
+        kwargs = {"bk_biz_id": biz_id, "bk_set_id": set_id, "fields": DATA_CONFIGS["module"]["fields"]}
         return self.client.cc.search_module(kwargs)
 
-    def get_topo(self,biz_id):
+    def get_topo(self, biz_id):
         kwargs = {
             "bk_biz_id": biz_id,
         }

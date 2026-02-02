@@ -2,34 +2,31 @@
 
 from django.db import migrations
 
+
 def forwards_func(apps, schema_editor):
     # 1. 创建调度策略（每天17点运行）
-    PeriodicTask = apps.get_model('django_celery_beat', 'PeriodicTask')
-    CrontabSchedule = apps.get_model('django_celery_beat', 'CrontabSchedule')
+    PeriodicTask = apps.get_model("django_celery_beat", "PeriodicTask")
+    CrontabSchedule = apps.get_model("django_celery_beat", "CrontabSchedule")
     schedule, _ = CrontabSchedule.objects.get_or_create(
-        minute=0,
-        hour=17,       # 午夜
-        day_of_month='*',
-        month_of_year='*',
-        day_of_week='*'
+        minute=0, hour=17, day_of_month="*", month_of_year="*", day_of_week="*"  # 午夜
     )
 
     # 2. 创建定时任务
     PeriodicTask.objects.get_or_create(
-        name='每日同步数据',
+        name="每日同步数据",
         defaults={
-            'task': 'home_application.tasks.sync_data',  # 任务路径
-            'crontab': schedule,
-            'enabled': True,
-            'description': '同步数据'
-        }
+            "task": "home_application.tasks.sync_data",  # 任务路径
+            "crontab": schedule,
+            "enabled": True,
+            "description": "同步数据",
+        },
     )
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('home_application', '0008_apirequestcount'),
+        ("home_application", "0008_apirequestcount"),
     ]
 
     operations = [

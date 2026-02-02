@@ -8,16 +8,33 @@ from rest_framework.views import APIView
 
 from blueking.component.shortcuts import get_client_by_request
 from core.middleware import logger
-from home_application.constants import WEB_SUCCESS_CODE, JOB_BK_BIZ_ID, SEARCH_FILE_PLAN_ID, MAX_ATTEMPTS, WAITING_CODE, \
-    JOB_RESULT_ATTEMPTS_INTERVAL, SUCCESS_CODE, BACKUP_FILE_PLAN_ID, BK_JOB_HOST, CALLBACK_URL, ALLOW_PATH_PREFIX, \
-    ALLOW_FILE_SUFFIX, FAILED_CODE
+from home_application.constants import (
+    ALLOW_FILE_SUFFIX,
+    ALLOW_PATH_PREFIX,
+    BACKUP_FILE_PLAN_ID,
+    BK_JOB_HOST,
+    CALLBACK_URL,
+    FAILED_CODE,
+    JOB_BK_BIZ_ID,
+    JOB_RESULT_ATTEMPTS_INTERVAL,
+    MAX_ATTEMPTS,
+    SEARCH_FILE_PLAN_ID,
+    SUCCESS_CODE,
+    WAITING_CODE,
+    WEB_SUCCESS_CODE,
+)
 from home_application.models import BackupJob
-from home_application.tasks.job import poll_job_status, fetch_job_logs, process_backup_results
 from home_application.services.job import batch_get_job_logs
+from home_application.tasks.job import (
+    fetch_job_logs,
+    poll_job_status,
+    process_backup_results,
+)
 
 
 class SearchFileAPIView(APIView):
     """搜索文件API"""
+
     def get(self, request):
         """根据主机IP、文件目录和文件后缀查询文件"""
         host_id_list_str = request.query_params.get("host_id_list")
@@ -27,18 +44,21 @@ class SearchFileAPIView(APIView):
 
         # 校验参数
         if suffix not in ALLOW_FILE_SUFFIX:
-            return Response({
-                "result": False,
-                "code": WEB_SUCCESS_CODE,
-                "message": "文件后缀不合法",
-            })
+            return Response(
+                {
+                    "result": False,
+                    "code": WEB_SUCCESS_CODE,
+                    "message": "文件后缀不合法",
+                }
+            )
         if not search_path.startswith(tuple(ALLOW_PATH_PREFIX)) or ".." in search_path:
-            return Response({
-                "result": False,
-                "code": WEB_SUCCESS_CODE,
-                "message": "搜索路径不合法",
-            })
-
+            return Response(
+                {
+                    "result": False,
+                    "code": WEB_SUCCESS_CODE,
+                    "message": "搜索路径不合法",
+                }
+            )
 
         kwargs = {
             "bk_scope_type": "biz",
@@ -81,19 +101,23 @@ class SearchFileAPIView(APIView):
             elif status == SUCCESS_CODE or status == FAILED_CODE:
                 break
             else:  # 既不是 WAITING 也不是 SUCCESS，就是失败
-                return Response({
-                    "result": False,
-                    "code": WEB_SUCCESS_CODE,
-                    "message": "查询失败",
-                })
+                return Response(
+                    {
+                        "result": False,
+                        "code": WEB_SUCCESS_CODE,
+                        "message": "查询失败",
+                    }
+                )
             attempts += 1
 
         if attempts == MAX_ATTEMPTS:
-            return Response({
-                "result": False,
-                "code": WEB_SUCCESS_CODE,
-                "message": "查询超时",
-            })
+            return Response(
+                {
+                    "result": False,
+                    "code": WEB_SUCCESS_CODE,
+                    "message": "查询超时",
+                }
+            )
 
         step_instance_id = step_instance_list[0].get("step_instance_id")
 
@@ -104,7 +128,7 @@ class SearchFileAPIView(APIView):
             job_instance_id=job_instance_id,
             step_instance_id=step_instance_id,
             host_id_list=host_id_list,
-            bk_biz_id=JOB_BK_BIZ_ID
+            bk_biz_id=JOB_BK_BIZ_ID,
         )
 
         log_list = []
@@ -119,11 +143,13 @@ class SearchFileAPIView(APIView):
             parsed_data["bk_host_id"] = bk_host_id
             log_list.append(parsed_data)
 
-        return Response({
-            "result": True,
-            "code": WEB_SUCCESS_CODE,
-            "data": log_list,
-        })
+        return Response(
+            {
+                "result": True,
+                "code": WEB_SUCCESS_CODE,
+                "data": log_list,
+            }
+        )
 
 
 class BackupFileAPIView(APIView):
@@ -150,23 +176,29 @@ class BackupFileAPIView(APIView):
 
         # 校验参数
         if suffix not in ALLOW_FILE_SUFFIX:
-            return Response({
-                "result": False,
-                "code": WEB_SUCCESS_CODE,
-                "message": "文件后缀不合法",
-            })
+            return Response(
+                {
+                    "result": False,
+                    "code": WEB_SUCCESS_CODE,
+                    "message": "文件后缀不合法",
+                }
+            )
         if not search_path.startswith(tuple(ALLOW_PATH_PREFIX)) or ".." in search_path:
-            return Response({
-                "result": False,
-                "code": WEB_SUCCESS_CODE,
-                "message": "搜索路径不合法",
-            })
+            return Response(
+                {
+                    "result": False,
+                    "code": WEB_SUCCESS_CODE,
+                    "message": "搜索路径不合法",
+                }
+            )
         if not backup_path.startswith(tuple(ALLOW_PATH_PREFIX)) or ".." in backup_path:
-            return Response({
-                "result": False,
-                "code": WEB_SUCCESS_CODE,
-                "message": "备份路径不合法",
-            })
+            return Response(
+                {
+                    "result": False,
+                    "code": WEB_SUCCESS_CODE,
+                    "message": "备份路径不合法",
+                }
+            )
 
         # 执行作业计划
         kwargs = {
@@ -180,20 +212,14 @@ class BackupFileAPIView(APIView):
                         "host_id_list": host_id_list,
                     },
                 },
-                {
-                    "name": "search_path",
-                    "value": search_path
-                },
-                {
-                    "name": "suffix",
-                    "value": suffix
-                },
+                {"name": "search_path", "value": search_path},
+                {"name": "suffix", "value": suffix},
                 {
                     "name": "backup_path",
                     "value": backup_path,
                 },
             ],
-            "callback_url": CALLBACK_URL
+            "callback_url": CALLBACK_URL,
         }
 
         try:
@@ -202,18 +228,24 @@ class BackupFileAPIView(APIView):
             job_instance_id = job_response.get("data", {}).get("job_instance_id")
 
             if not job_instance_id:
-                return Response({
-                    "result": False,
-                    "code": WEB_SUCCESS_CODE,
-                    "message": "执行作业失败，未返回job_instance_id",
-                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response(
+                    {
+                        "result": False,
+                        "code": WEB_SUCCESS_CODE,
+                        "message": "执行作业失败，未返回job_instance_id",
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
         except Exception as e:
             logger.error(f"执行作业异常: {str(e)}")
-            return Response({
-                "result": False,
-                "code": WEB_SUCCESS_CODE,
-                "message": f"执行作业失败: {str(e)}",
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {
+                    "result": False,
+                    "code": WEB_SUCCESS_CODE,
+                    "message": f"执行作业失败: {str(e)}",
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         # 生成作业链接
         bk_job_link = "{}/biz/{}/execute/task/{}".format(
@@ -223,7 +255,7 @@ class BackupFileAPIView(APIView):
         )
 
         # 创建备份作业记录（状态为pending）
-        backup_job = BackupJob.objects.create(
+        BackupJob.objects.create(
             job_instance_id=str(job_instance_id),
             operator=request.user.username,
             search_path=search_path,
@@ -241,24 +273,20 @@ class BackupFileAPIView(APIView):
         # 启动异步任务处理作业（传递 bk_token 而非 bk_username）
         # 使用 Celery Chain 编排任务：轮询状态 -> 获取日志 -> 处理结果
         chain(
-            poll_job_status.s(
-                job_instance_id=str(job_instance_id),
-                bk_biz_id=JOB_BK_BIZ_ID,
-                bk_token=bk_token
-            ),
-            fetch_job_logs.s(
-                host_id_list=host_id_list,
-                bk_token=bk_token
-            ),
-            process_backup_results.s()
+            poll_job_status.s(job_instance_id=str(job_instance_id), bk_biz_id=JOB_BK_BIZ_ID, bk_token=bk_token),
+            fetch_job_logs.s(host_id_list=host_id_list, bk_token=bk_token),
+            process_backup_results.s(),
         ).apply_async()
 
         # 立即返回，不阻塞等待作业完成
-        return Response({
-            "result": True,
-            "data": "备份作业已提交，正在后台处理",
-            "code": WEB_SUCCESS_CODE,
-        })
+        return Response(
+            {
+                "result": True,
+                "data": "备份作业已提交，正在后台处理",
+                "code": WEB_SUCCESS_CODE,
+            }
+        )
+
 
 class BackupJobCallbackAPIView(APIView):
     """
@@ -278,23 +306,16 @@ class BackupJobCallbackAPIView(APIView):
                 data = json.loads(key)
             except json.JSONDecodeError:
                 logger.warning(f"无效的回调数据格式: {key}")
-                return Response(
-                    {"error": "invalid callback payload"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response({"error": "invalid callback payload"}, status=status.HTTP_400_BAD_REQUEST)
 
         job_instance_id = data.get("job_instance_id")
         status_code = data.get("status")
         step_instances = data.get("step_instances", [])
         step_status = step_instances[0].get("status")
 
-
         if not job_instance_id or not status_code:
             logger.warning(f"回调缺少必要参数: job_instance_id={job_instance_id}, status={status_code}")
-            return Response(
-                {"error": "missing required parameters"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "missing required parameters"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             backup_job = BackupJob.objects.get(job_instance_id=str(job_instance_id))
@@ -308,10 +329,7 @@ class BackupJobCallbackAPIView(APIView):
                     backup_job.mark_failed()
                     new_status = BackupJob.Status.FAILED
 
-                logger.info(
-                    f"回调更新作业状态: job_instance_id={job_instance_id}, "
-                    f"new_status={new_status}"
-                )
+                logger.info(f"回调更新作业状态: job_instance_id={job_instance_id}, " f"new_status={new_status}")
             else:
                 logger.info(
                     f"作业状态已处理，跳过回调更新: job_instance_id={job_instance_id}, "
@@ -322,7 +340,4 @@ class BackupJobCallbackAPIView(APIView):
 
         except BackupJob.DoesNotExist:
             logger.error(f"备份作业不存在: job_instance_id={job_instance_id}")
-            return Response(
-                {"error": "backup job not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "backup job not found"}, status=status.HTTP_404_NOT_FOUND)
