@@ -1,4 +1,6 @@
 # cmdb/services/topo_sync.py
+from concurrent.futures import ThreadPoolExecutor
+
 from django.db import transaction
 
 from home_application.models import BizInfo, ModuleInfo, SetInfo, SyncStatus
@@ -16,14 +18,18 @@ class TopoCMDBSyncService:
         try:
             self.status.mark_running()
             biz_list = self.client.get_biz()["data"]["info"]
-            for biz in biz_list:
-                topo = self.client.get_topo(biz["bk_biz_id"])["data"]
-                self._sync_from_topo(topo[0])
+            with ThreadPoolExecutor(max_workers=10) as executor:
+                list(executor.map(self.sync_biz_topo, biz_list))
+
         except Exception as e:
             self.status.mark_failed(str(e))
             raise
         else:
             self.status.mark_success()
+
+    def sync_biz_topo(self, biz):
+        topo = self.client.get_topo(biz["bk_biz_id"])["data"]
+        self._sync_from_topo(topo[0])
 
     def _sync_from_topo(self, data: dict):
         """
