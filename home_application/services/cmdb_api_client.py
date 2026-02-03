@@ -25,7 +25,7 @@ class CMDBApiClient:
 
             data = response.json()
             if data.get("result", False) and "data" in data:
-                result_data = data["data"]["info"]
+                result_data = data
                 return result_data
             else:
                 error_msg = data.get("message", "Unknown error")
