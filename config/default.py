@@ -64,8 +64,15 @@ INSTALLED_APPS += (  # noqa
     "drf_yasg",  # Swagger API 文档生成工具
     "home_application",
     "mako_application",
+    "blueapps.opentelemetry.instrument_app",
 )
-
+# 启用 OpenTelemetry
+ENABLE_OTEL_METRICS = True
+ENABLE_OTEL_TRACE = True
+BK_APP_OTEL_INSTRUMENT_DB_API = True
+OTEL_LOGGING_TRACE_FORMAT = (
+    "[trace_id]: %(otelTraceID)s [span_id]: %(otelSpanID)s [resource.service.name]: %(otelServiceName)s"
+)
 # 跨域中间件
 MIDDLEWARE = ("corsheaders.middleware.CorsMiddleware",) + MIDDLEWARE
 # 自定义中间件

@@ -66,12 +66,11 @@ def fetch_api_counts_and_rename():
     import time
 
     temp_key = f"{API_STATS_KEY}_processing_{int(time.time())}"
-
+    # 如果不存在，则直接返回空数据
+    if not client.exists(API_STATS_KEY):
+        return {}, None
     try:
         client.rename(API_STATS_KEY, temp_key)
-    except redis.exceptions.ResponseError:
-        # Key 不存在（通常意味着没有数据）
-        return {}, None
     except Exception as e:
         logger.error(f"Failed to rename redis key: {e}")
         return {}, None
