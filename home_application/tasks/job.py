@@ -106,7 +106,10 @@ def fetch_job_logs(job_status_result, host_id_list, bk_token):
 def process_backup_results(fetch_logs_result):
     """
     业务任务：处理备份作业结果
+    保存所有记录（成功/失败）用于排查，使用 bulk_create 优化性能
     """
+    from django.db import transaction
+
     job_instance_id = fetch_logs_result.get("job_instance_id")
     is_job_success = fetch_logs_result.get("is_job_success")
     results = fetch_logs_result.get("results", [])
@@ -119,19 +122,30 @@ def process_backup_results(fetch_logs_result):
         logger.error(f"BackupJob不存在: {job_instance_id}")
         return
 
+    # 作业整体失败，直接标记退出
     if not is_job_success:
         backup_job.mark_failed()
         return
 
-    total_files = 0
+    records_to_create = []
     success_hosts = 0
     failed_hosts = 0
 
     for res in results:
         bk_host_id = res.get("bk_host_id")
         parsed_data = res.get("parsed_data")
+        is_host_success = res.get("is_success", False)
 
-        if not res.get("is_success") or not parsed_data:
+        # 主机执行失败或无解析数据
+        if not is_host_success or not parsed_data:
+            records_to_create.append(
+                BackupRecord(
+                    backup_job=backup_job,
+                    bk_host_id=bk_host_id,
+                    status="failed",
+                    bk_backup_name="文件备份失败",
+                )
+            )
             failed_hosts += 1
             continue
 
@@ -141,24 +155,33 @@ def process_backup_results(fetch_logs_result):
         else:
             json_step_res = parsed_data
 
+        # 每个文件创建一条记录
         for step_res in json_step_res:
-            BackupRecord.objects.create(
-                backup_job=backup_job,
-                bk_host_id=bk_host_id,
-                status="success",
-                bk_backup_name=step_res.get("bk_backup_name", "unknown"),
+            records_to_create.append(
+                BackupRecord(
+                    backup_job=backup_job,
+                    bk_host_id=bk_host_id,
+                    status="success",
+                    bk_backup_name=step_res.get("bk_backup_name", "unknown"),
+                )
             )
-            total_files += 1
 
         success_hosts += 1
 
-    # 更新作业最终状态
-    if failed_hosts == 0 and success_hosts > 0:
-        backup_job.mark_success(file_count=total_files)
-    elif success_hosts == 0:
-        backup_job.mark_failed()
-    else:
-        backup_job.mark_partial(file_count=total_files)
+    # 批量创建记录并更新作业状态
+    with transaction.atomic():
+        if records_to_create:
+            BackupRecord.objects.bulk_create(records_to_create, batch_size=1000)
+
+        total_files = len(records_to_create)
+
+        # 更新作业最终状态
+        if failed_hosts == 0 and success_hosts > 0:
+            backup_job.mark_success(file_count=total_files)
+        elif success_hosts == 0:
+            backup_job.mark_failed()
+        else:
+            backup_job.mark_partial(file_count=total_files)
 
     logger.info(
         f"作业处理完成: job={job_instance_id}, success={success_hosts}, failed={failed_hosts}, files={total_files}"

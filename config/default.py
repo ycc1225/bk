@@ -157,7 +157,7 @@ LANGUAGES = (
 
 # DRF 配置
 REST_FRAMEWORK = {
-    "EXCEPTION_HANDLER": "home_application.utils.exception_handler.custom_exception_handler",
+    "EXCEPTION_HANDLER": "home_application.exceptions.exception_handler.custom_exception_handler",
 }
 
 """

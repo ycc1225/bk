@@ -3,6 +3,10 @@ import os
 
 from home_application.models import BizInfo, ModuleInfo, SetInfo
 
+# 作业最大返回条数
+MAX_HOST_COUNT = 5
+MAX_FILE_COUNT = 5
+
 # JOB执行作业的业务ID
 JOB_BK_BIZ_ID = 3
 
