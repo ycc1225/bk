@@ -11,10 +11,15 @@ specific language governing permissions and limitations under the License.
 """
 
 from django.conf.urls import include, url
+from django.urls import re_path
+
+from home_application import views
 
 urlpatterns = (
     # CMDB 相关 API
     url(r"^cmdb/", include("home_application.cmdb_urls")),
     # JOB 相关 API
     url(r"^job/", include("home_application.job_urls")),
+    url(r"^metrics/$", views.metrics),
+    re_path(r"^custom_metrics/$", views.custom_metrics, name="custom_metrics"),
 )
