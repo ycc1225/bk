@@ -2,6 +2,8 @@ import logging
 
 from django.utils.deprecation import MiddlewareMixin
 
+import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,3 +59,40 @@ class RecordUserBehaviorMiddleware(MiddlewareMixin):
             logger.exception(f"Unexpected Exception when record user behavior:{e}")
             pass
         return response
+
+
+class TraceIdResponseHeaderMiddleware(MiddlewareMixin):
+    """将当前请求的 trace_id 注入到响应头 `X-Trace-Id`。
+
+    说明：
+    - 仅当 `ENABLE_OTEL_TRACE=True` 时生效
+    - 如果上游已注入 `X-Trace-Id`，则不覆盖
+    - 不影响正常业务响应（异常会被吞掉）
+    """
+
+    def process_response(self, request, response):
+        try:
+            if not getattr(settings, "ENABLE_OTEL_TRACE", False):
+                return response
+
+            if getattr(response, "has_header", None) and response.has_header("X-Trace-Id"):
+                return response
+            if getattr(response, "get", None) and response.get("X-Trace-Id"):
+                return response
+
+            from opentelemetry.trace import get_current_span
+
+            span = get_current_span()
+            span_context = getattr(span, "get_span_context", lambda: None)()
+            if not span_context or not getattr(span_context, "is_valid", False):
+                return response
+
+            trace_id_int = getattr(span_context, "trace_id", 0) or 0
+            if not trace_id_int:
+                return response
+
+            response["X-Trace-Id"] = format(int(trace_id_int), "032x")
+            return response
+        except Exception:  # pylint: disable=broad-except
+            logger.exception("Unexpected Exception when inject trace id header")
+            return response
