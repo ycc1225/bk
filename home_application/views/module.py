@@ -4,7 +4,10 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from home_application.exceptions.cmdb import CmdbParameterError
 from home_application.models import ModuleInfo
-from home_application.serializers import ModuleInfoQuerySerializer, ModuleInfoSerializer
+from home_application.serializers.cmdb import (
+    ModuleInfoQuerySerializer,
+    ModuleInfoSerializer,
+)
 
 
 class ModuleInfoViewSet(ReadOnlyModelViewSet):

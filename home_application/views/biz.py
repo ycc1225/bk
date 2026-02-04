@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from home_application.models import BizInfo
-from home_application.serializers import BizInfoSerializer
+from home_application.serializers.cmdb import BizInfoSerializer
 
 
 class BizInfoViewSet(ReadOnlyModelViewSet):

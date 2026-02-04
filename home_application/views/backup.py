@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from home_application.models import BackupJob
-from home_application.serializers import (
+from home_application.serializers.job import (
     BackupJobDetailSerializer,
     BackupJobListSerializer,
 )

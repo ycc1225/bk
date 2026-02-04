@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 
 from blueking.component.shortcuts import get_client_by_request
 from home_application.exceptions.cmdb import CmdbExecutionError, CmdbParameterError
-from home_application.serializers import HostListQuerySerializer
+from home_application.serializers.cmdb import HostListQuerySerializer
 
 
 class HostListAPIView(APIView):

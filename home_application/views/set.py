@@ -4,7 +4,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from home_application.exceptions.cmdb import CmdbParameterError
 from home_application.models import SetInfo
-from home_application.serializers import SetInfoQuerySerializer, SetInfoSerializer
+from home_application.serializers.cmdb import SetInfoQuerySerializer, SetInfoSerializer
 
 
 class SetInfoViewSet(ReadOnlyModelViewSet):

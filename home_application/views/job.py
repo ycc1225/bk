@@ -15,7 +15,7 @@ from home_application.constants import (
 )
 from home_application.exceptions.job import JobParameterError
 from home_application.models import BackupJob
-from home_application.serializers import (
+from home_application.serializers.job import (
     BackupJobSubmitSerializer,
     SearchFileSubmitSerializer,
 )
