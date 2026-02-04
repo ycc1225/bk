@@ -1,49 +1,7 @@
-"""
-DRF 序列化器定义
-"""
-
 from rest_framework import serializers
 
-from .constants import MAX_FILE_COUNT, MAX_HOST_COUNT
-from .models import (
-    ApiRequestCount,
-    BackupJob,
-    BizInfo,
-    ModuleInfo,
-    SetInfo,
-    SyncStatus,
-)
-
-
-class BizInfoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BizInfo
-        fields = ["bk_biz_id", "bk_biz_name"]
-
-
-class SetInfoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SetInfo
-        fields = ["bk_set_id", "bk_set_name", "bk_biz_id"]
-
-
-class SetInfoQuerySerializer(serializers.Serializer):
-    """集群信息查询参数序列化器"""
-
-    bk_biz_id = serializers.IntegerField(required=True, min_value=1, help_text="业务ID")
-
-
-class ModuleInfoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ModuleInfo
-        fields = ["bk_module_id", "bk_module_name", "bk_set_id", "bk_biz_id"]
-
-
-class ModuleInfoQuerySerializer(serializers.Serializer):
-    """模块信息查询参数序列化器"""
-
-    bk_biz_id = serializers.IntegerField(required=True, min_value=1, help_text="业务ID")
-    bk_set_id = serializers.IntegerField(required=True, min_value=1, help_text="集群ID")
+from home_application.constants import MAX_FILE_COUNT, MAX_HOST_COUNT
+from home_application.models import BackupJob
 
 
 class SearchFileSubmitSerializer(serializers.Serializer):
@@ -183,36 +141,3 @@ class BackupJobDetailSerializer(serializers.ModelSerializer):
                 )
 
         return dict(host_files)
-
-
-class ApiRequestCountSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ApiRequestCount
-        fields = ["api_category", "api_name", "request_count"]
-
-
-class SyncStatusSerializer(serializers.ModelSerializer):
-    last_sync_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
-
-    class Meta:
-        model = SyncStatus
-        fields = ["name", "last_status", "last_sync_at", "last_error"]
-
-
-class HostListQuerySerializer(serializers.Serializer):
-    """主机列表查询参数序列化器"""
-
-    bk_biz_id = serializers.IntegerField(required=True, min_value=1, help_text="业务ID")
-    bk_set_id = serializers.IntegerField(required=False, min_value=1, help_text="集群ID")
-    bk_module_id = serializers.IntegerField(required=False, min_value=1, help_text="模块ID")
-    bk_host_id = serializers.IntegerField(required=False, min_value=1, help_text="主机ID")
-    bk_host_innerip = serializers.CharField(required=False, max_length=50, help_text="主机内网IP")
-    operator = serializers.CharField(required=False, max_length=50, help_text="主机维护人")
-    page = serializers.IntegerField(required=False, default=1, min_value=1, help_text="页码")
-    page_size = serializers.IntegerField(required=False, default=10, min_value=1, max_value=100, help_text="每页数量")
-
-
-class HostDetailQuerySerializer(serializers.Serializer):
-    """主机详情查询参数序列化器"""
-
-    bk_host_id = serializers.IntegerField(required=True, min_value=1, help_text="主机ID")
