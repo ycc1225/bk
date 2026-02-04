@@ -1,6 +1,11 @@
 from rest_framework import serializers
 
-from home_application.constants import MAX_FILE_COUNT, MAX_HOST_COUNT
+from home_application.constants import (
+    ALLOW_FILE_SUFFIX,
+    ALLOW_PATH_PREFIX,
+    MAX_FILE_COUNT,
+    MAX_HOST_COUNT,
+)
 from home_application.models import BackupJob
 
 
@@ -8,22 +13,17 @@ class SearchFileSubmitSerializer(serializers.Serializer):
     """搜索文件提交序列化器"""
 
     search_path = serializers.CharField(required=True)
-    suffix = serializers.CharField(required=True)
+    suffix = serializers.ChoiceField(
+        choices=ALLOW_FILE_SUFFIX,
+        error_messages={"invalid_choice": f"文件后缀不合法，允许的后缀：{','.join(ALLOW_FILE_SUFFIX)}"},
+        required=True,
+    )
     host_list = serializers.ListField(
         child=serializers.IntegerField(min_value=1), required=True, min_length=1, max_length=100
     )
 
-    def validate_suffix(self, value):
-        """验证文件后缀是否合法"""
-        from home_application.constants import ALLOW_FILE_SUFFIX
-
-        if value not in ALLOW_FILE_SUFFIX:
-            raise serializers.ValidationError(f"文件后缀不合法，允许的后缀：{', '.join(ALLOW_FILE_SUFFIX)}")
-        return value
-
     def validate_search_path(self, value):
         """验证搜索路径是否合法"""
-        from home_application.constants import ALLOW_PATH_PREFIX
 
         if not value.startswith(tuple(ALLOW_PATH_PREFIX)) or ".." in value:
             raise serializers.ValidationError("搜索路径不合法，不能包含 '..' 且必须以允许的路径前缀开头")

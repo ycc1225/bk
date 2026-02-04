@@ -7,7 +7,7 @@ from home_application.models import BizInfo, ModuleInfo, SetInfo
 # API鉴权信息
 # =============================
 _auth_info = {
-    "bk_username": "25zhujiao1",
+    "bk_username": os.getenv("BK_USERNAME", "admin"),
     "bk_app_code": os.getenv("BKPAAS_APP_ID"),
     "bk_app_secret": os.getenv("BKPAAS_APP_SECRET"),
 }
@@ -17,9 +17,6 @@ API_AUTH_HEADER = {"X-Bkapi-Authorization": json.dumps(_auth_info)}
 # =============================
 # JOB常量
 # =============================
-
-# JOB执行作业的业务ID
-JOB_BK_BIZ_ID = 3
 
 # 作业执行结果查询的最大轮询次数
 MAX_ATTEMPTS = 10
@@ -39,9 +36,12 @@ STEP_STATUS_SUCCESS = 9
 # 默认HTTP状态码
 WEB_SUCCESS_CODE = 0
 
-# 作业方案ID
-SEARCH_FILE_PLAN_ID = 1000451  # 将这里的方案ID更改为你自己在JOB平台上新建的方案ID
-BACKUP_FILE_PLAN_ID = 1000452
+# 从环境变量读取业务 ID
+JOB_BK_BIZ_ID = int(os.getenv("JOB_BK_BIZ_ID", "3"))
+
+# 从环境变量读取作业方案 ID
+SEARCH_FILE_PLAN_ID = int(os.getenv("SEARCH_FILE_PLAN_ID", "1000451"))
+BACKUP_FILE_PLAN_ID = int(os.getenv("BACKUP_FILE_PLAN_ID", "1000452"))
 
 
 # =============================

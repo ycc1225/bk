@@ -76,6 +76,11 @@ class SyncStatus(models.Model):
 
 
 class BackupJob(models.Model):
+    """
+    状态转移
+    pending -> processing -> success/partial/failed
+    """
+
     class Status:
         PENDING = "pending"
         PROCESSING = "processing"
