@@ -23,7 +23,13 @@ def get_esb_client(bk_token):
     return component_client.ComponentClient(APP_CODE, SECRET_KEY, common_args={"bk_token": bk_token})
 
 
-@shared_task(bind=True)
+@shared_task(
+    bind=True,
+    max_retries=MAX_ATTEMPTS,
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
 def poll_job_status(self, job_instance_id, bk_biz_id, bk_token):
     """
     通用任务：轮询作业执行状态
@@ -71,7 +77,7 @@ def poll_job_status(self, job_instance_id, bk_biz_id, bk_token):
         if isinstance(e, self.Retry):
             raise e
         logger.error(f"查询作业状态异常: job_instance_id={job_instance_id}, error={str(e)}")
-        raise self.retry(exc=e, countdown=JOB_RESULT_ATTEMPTS_INTERVAL, max_retries=MAX_ATTEMPTS)
+        raise self.retry(exc=e)
 
 
 @shared_task

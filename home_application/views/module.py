@@ -4,22 +4,35 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from home_application.exceptions.cmdb import CmdbParameterError
 from home_application.models import ModuleInfo
-from home_application.serializers import ModuleInfoSerializer
+from home_application.serializers import ModuleInfoQuerySerializer, ModuleInfoSerializer
 
 
 class ModuleInfoViewSet(ReadOnlyModelViewSet):
+    """
+    模块信息视图集
+
+    查询参数：
+        bk_biz_id (int, 必填): 业务ID
+        bk_set_id (int, 必填): 集群ID
+    """
+
     serializer_class = ModuleInfoSerializer
 
     def get_queryset(self):
-        params = self.request.query_params
-        biz_id = params.get("bk_biz_id")
-        set_id = params.get("bk_set_id")
+        """根据业务ID和集群ID过滤模块信息"""
+        # 使用序列化器进行参数校验
+        query_serializer = ModuleInfoQuerySerializer(data=self.request.query_params)
+        if not query_serializer.is_valid():
+            raise CmdbParameterError(f"参数校验失败: {query_serializer.errors}")
 
-        if not biz_id and not set_id:
-            raise CmdbParameterError("缺少 bk_biz_id 或 bk_set_id 参数")
+        validated_data = query_serializer.validated_data
 
-        return ModuleInfo.objects.filter(bk_biz_id=biz_id, bk_set_id=set_id).order_by("bk_module_id")
+        return ModuleInfo.objects.filter(
+            bk_biz_id=validated_data["bk_biz_id"], bk_set_id=validated_data["bk_set_id"]
+        ).order_by("bk_module_id")
 
     def list(self, request, *args, **kwargs):
-        data = {"info": self.get_serializer(self.get_queryset(), many=True).data}
-        return Response(ok_data(data))
+        """返回模块列表，包装为 {"info": [...]} 格式"""
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(ok_data(data={"info": serializer.data}))
