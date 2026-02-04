@@ -211,7 +211,7 @@ class JobExecutionService:
         backup_path: str,
         plan_id: int,
         callback_url: str,
-    ) -> tuple[str, str]:
+    ) -> tuple[str, str] | None:
         """
         执行文件备份作业（异步，不等待结果）
 
@@ -265,8 +265,7 @@ class JobExecutionService:
         except Exception as e:
             logger.error(f"执行备份作业异常: {str(e)}")
             if isinstance(e, JobExecutionError):
-                raise
-            raise JobExecutionError(f"执行作业失败: {str(e)}")
+                raise JobExecutionError(f"执行作业失败: {str(e)}")
 
 
 class BackupJobService:
@@ -335,12 +334,15 @@ class BackupJobService:
             process_backup_results,
         )
 
-        chain(
-            poll_job_status.s(
-                job_instance_id=job_instance_id,
-                bk_biz_id=bk_biz_id,
-                bk_token=bk_token,
-            ),
-            fetch_job_logs.s(host_id_list=host_id_list, bk_token=bk_token),
-            process_backup_results.s(),
-        ).apply_async()
+        try:
+            chain(
+                poll_job_status.s(
+                    job_instance_id=job_instance_id,
+                    bk_biz_id=bk_biz_id,
+                    bk_token=bk_token,
+                ),
+                fetch_job_logs.s(host_id_list=host_id_list, bk_token=bk_token),
+                process_backup_results.s(),
+            ).apply_async()
+        except Exception as e:
+            logger.error(f"启动异步任务链失败: {str(e)}")

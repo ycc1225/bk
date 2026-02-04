@@ -3,7 +3,10 @@ from rest_framework.views import APIView
 
 from blueking.component.shortcuts import get_client_by_request
 from home_application.exceptions.cmdb import CmdbExecutionError, CmdbParameterError
-from home_application.serializers.cmdb import HostListQuerySerializer
+from home_application.serializers.cmdb import (
+    HostDetailQuerySerializer,
+    HostListQuerySerializer,
+)
 
 
 class HostListAPIView(APIView):
@@ -101,8 +104,6 @@ class HostDetailAPIView(APIView):
 
     def get(self, request):
         """根据主机ID返回主机详情信息"""
-        from home_application.serializers import HostDetailQuerySerializer
-
         # 使用序列化器进行参数校验
         query_serializer = HostDetailQuerySerializer(data=request.query_params)
         if not query_serializer.is_valid():
