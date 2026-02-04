@@ -197,3 +197,22 @@ class SyncStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = SyncStatus
         fields = ["name", "last_status", "last_sync_at", "last_error"]
+
+
+class HostListQuerySerializer(serializers.Serializer):
+    """主机列表查询参数序列化器"""
+
+    bk_biz_id = serializers.IntegerField(required=True, min_value=1, help_text="业务ID")
+    bk_set_id = serializers.IntegerField(required=False, min_value=1, help_text="集群ID")
+    bk_module_id = serializers.IntegerField(required=False, min_value=1, help_text="模块ID")
+    bk_host_id = serializers.IntegerField(required=False, min_value=1, help_text="主机ID")
+    bk_host_innerip = serializers.CharField(required=False, max_length=50, help_text="主机内网IP")
+    operator = serializers.CharField(required=False, max_length=50, help_text="主机维护人")
+    page = serializers.IntegerField(required=False, default=1, min_value=1, help_text="页码")
+    page_size = serializers.IntegerField(required=False, default=10, min_value=1, max_value=100, help_text="每页数量")
+
+
+class HostDetailQuerySerializer(serializers.Serializer):
+    """主机详情查询参数序列化器"""
+
+    bk_host_id = serializers.IntegerField(required=True, min_value=1, help_text="主机ID")
