@@ -50,7 +50,6 @@ def custom_exception_handler(exc, context):
         request = context.get("request")
         request_path = request.path if request else None
         request_method = request.method if request else None
-        request_user = str(request.user) if request and hasattr(request, "user") else "anonymous"
 
         # 记录结构化日志
         logger.error(
@@ -64,7 +63,6 @@ def custom_exception_handler(exc, context):
                 "context": extra_context,
                 "request_path": request_path,
                 "request_method": request_method,
-                "request_user": request_user,
             },
             exc_info=True,  # 包含完整的异常堆栈
         )

@@ -2,7 +2,6 @@ import logging
 
 from celery import shared_task
 from django.db.models import F
-from django.utils import timezone
 
 from home_application.models import ApiRequestCount
 from home_application.utils.redis_utils import (
@@ -11,33 +10,6 @@ from home_application.utils.redis_utils import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-@shared_task
-def record_api_request_task(username, api_category, api_name, is_error=False, date=None):
-    """
-    异步记录 API 请求次数 (保留作为备用或单次记录使用)
-    """
-    try:
-        if date is None:
-            date = timezone.now().date()
-
-        # 根据 api_category, api_name 和 date 记录请求次数
-        api_request_count, created = ApiRequestCount.objects.get_or_create(
-            api_category=api_category, api_name=api_name, date=date
-        )
-
-        if is_error:
-            # 增加错误计数
-            api_request_count.error_count = F("error_count") + 1
-        else:
-            # 增加正常请求计数
-            api_request_count.request_count = F("request_count") + 1
-
-        api_request_count.save()
-    except Exception as e:
-        logger.error(f"异步记录用户行为失败: 用户={username}, 类别={api_category}, " f"接口={api_name}, 错误={str(e)}")
-        pass
 
 
 @shared_task

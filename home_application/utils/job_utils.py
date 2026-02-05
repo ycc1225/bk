@@ -81,7 +81,9 @@ def batch_get_job_logs(client, job_instance_id, step_instance_id, host_id_list, 
                     else:
                         logger.warning(f"日志内容格式不符合预期: host={bk_host_id}, type={type(parsed)}")
                 except json.JSONDecodeError:
-                    logger.warning(f"日志内容不是有效的 JSON: host={bk_host_id}, content={log_content[:100]}")
+                    logger.warning(
+                        f"日志内容不是有效的 JSON: host={bk_host_id}, step={job_instance_id}-{step_instance_id}"
+                    )
 
             results.append(
                 {
