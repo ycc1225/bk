@@ -3,6 +3,7 @@ CMDB 相关的模型单元测试
 测试 BizInfo, SetInfo, ModuleInfo, SyncStatus 模型
 """
 
+from django.db import IntegrityError
 from django.test import TestCase
 from django.utils import timezone
 
@@ -77,8 +78,6 @@ class TestSyncStatusModel(TestCase):
 
     def test_unique_name_constraint(self):
         """测试：name 字段的唯一性约束"""
-        from django.db import IntegrityError
-
         with self.assertRaises(IntegrityError):
             SyncStatus.objects.create(name="test_sync", last_status="pending")
 
@@ -94,8 +93,6 @@ class TestBizInfoModel(TestCase):
 
     def test_unique_bk_biz_id(self):
         """测试：bk_biz_id 唯一性约束"""
-        from django.db import IntegrityError
-
         BizInfo.objects.create(bk_biz_id=1, bk_biz_name="业务1")
         with self.assertRaises(IntegrityError):
             BizInfo.objects.create(bk_biz_id=1, bk_biz_name="业务2")

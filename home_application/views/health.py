@@ -1,6 +1,9 @@
+from celery import current_app
 from django.db import connection
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from home_application.utils.redis_utils import get_redis_client
 
 
 class HealthCheckAPIView(APIView):
@@ -32,8 +35,6 @@ class HealthCheckAPIView(APIView):
             return False
 
     def _check_redis(self):
-        from home_application.utils.redis_utils import get_redis_client
-
         try:
             client = get_redis_client()
             return client.ping() if client else False
@@ -42,8 +43,6 @@ class HealthCheckAPIView(APIView):
 
     def _check_celery(self):
         # 检查 Celery worker 是否在线
-        from celery import current_app
-
         try:
             stats = current_app.control.inspect().stats()
             return bool(stats)

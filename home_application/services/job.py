@@ -2,6 +2,21 @@ import json
 import logging
 import time
 
+from celery import chain
+
+from home_application.constants import (
+    BK_JOB_HOST,
+    FAILED_CODE,
+    JOB_RESULT_ATTEMPTS_INTERVAL,
+    MAX_ATTEMPTS,
+    SUCCESS_CODE,
+    WAITING_CODE,
+)
+from home_application.exceptions.job import (
+    JobExecutionError,
+    JobStatusError,
+    JobTimeoutError,
+)
 from home_application.models import BackupJob
 
 logger = logging.getLogger(__name__)
@@ -113,19 +128,6 @@ class JobExecutionService:
             JobTimeoutError: 作业执行超时
             JobStatusError: 作业状态异常
         """
-        from home_application.constants import (
-            FAILED_CODE,
-            JOB_RESULT_ATTEMPTS_INTERVAL,
-            MAX_ATTEMPTS,
-            SUCCESS_CODE,
-            WAITING_CODE,
-        )
-        from home_application.exceptions.job import (
-            JobExecutionError,
-            JobStatusError,
-            JobTimeoutError,
-        )
-
         # 1. 执行作业计划
         kwargs = {
             "bk_scope_type": "biz",
@@ -229,9 +231,6 @@ class JobExecutionService:
         Raises:
             JobExecutionError: 作业执行失败
         """
-        from home_application.constants import BK_JOB_HOST
-        from home_application.exceptions.job import JobExecutionError
-
         kwargs = {
             "bk_scope_type": "biz",
             "bk_scope_id": self.bk_biz_id,
@@ -296,8 +295,6 @@ class BackupJobService:
         Returns:
             BackupJob: 创建的备份作业实例
         """
-        from home_application.models import BackupJob
-
         return BackupJob.objects.create(
             job_instance_id=job_instance_id,
             operator=operator,
@@ -326,8 +323,7 @@ class BackupJobService:
             bk_biz_id: 业务 ID
             bk_token: 用户 token
         """
-        from celery import chain
-
+        # 局部导入避免循环依赖（tasks.job 导入了 services.job）
         from home_application.tasks.job import (
             fetch_job_logs,
             poll_job_status,

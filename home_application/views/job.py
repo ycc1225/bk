@@ -12,6 +12,7 @@ from home_application.constants import (
     CALLBACK_URL,
     JOB_BK_BIZ_ID,
     SEARCH_FILE_PLAN_ID,
+    SUCCESS_CODE,
 )
 from home_application.exceptions.job import JobParameterError
 from home_application.models import BackupJob
@@ -153,8 +154,6 @@ class BackupJobCallbackAPIView(APIView):
             return Response({"error": "missing required parameters"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            from home_application.constants import SUCCESS_CODE
-
             backup_job = BackupJob.objects.get(job_instance_id=str(job_instance_id))
 
             # 只更新未完成的作业

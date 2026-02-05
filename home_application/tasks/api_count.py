@@ -2,6 +2,7 @@ import logging
 
 from celery import shared_task
 from django.db.models import F
+from django.utils import timezone
 
 from home_application.models import ApiRequestCount
 from home_application.utils.redis_utils import (
@@ -18,8 +19,6 @@ def record_api_request_task(username, api_category, api_name, is_error=False, da
     异步记录 API 请求次数 (保留作为备用或单次记录使用)
     """
     try:
-        from django.utils import timezone
-
         if date is None:
             date = timezone.now().date()
 

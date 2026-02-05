@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 
+import home_application.utils.redis_utils as redis_utils
 from home_application.utils.redis_utils import (
     delete_redis_key,
     fetch_api_counts_and_rename,
@@ -28,8 +29,6 @@ class TestRedisUtils(TestCase):
         mock_from_url.return_value = mock_client
 
         # 重置全局变量
-        import home_application.utils.redis_utils as redis_utils
-
         redis_utils._redis_client = None
 
         client = get_redis_client()
@@ -42,8 +41,6 @@ class TestRedisUtils(TestCase):
         mock_from_url.side_effect = Exception("Connection failed")
 
         # 重置全局变量
-        import home_application.utils.redis_utils as redis_utils
-
         redis_utils._redis_client = None
 
         client = get_redis_client()

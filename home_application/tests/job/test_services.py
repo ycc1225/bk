@@ -3,10 +3,12 @@ Job 服务层单元测试
 专注测试业务逻辑，不测试外部接口调用
 """
 
+from unittest.mock import MagicMock
+
 from django.test import TestCase
 
 from home_application.models import BackupJob
-from home_application.services.job import BackupJobService
+from home_application.services.job import BackupJobService, batch_get_job_logs
 
 
 class TestBackupJobService(TestCase):
@@ -61,10 +63,6 @@ class TestBatchGetJobLogs(TestCase):
 
     def test_parse_valid_json_logs(self):
         """测试：解析有效的 JSON 日志"""
-        from unittest.mock import MagicMock
-
-        from home_application.services.job import batch_get_job_logs
-
         mock_client = MagicMock()
         mock_client.jobv3.batch_get_job_instance_ip_log.return_value = {
             "data": {
@@ -98,10 +96,6 @@ class TestBatchGetJobLogs(TestCase):
 
     def test_parse_invalid_json_logs(self):
         """测试：解析无效的 JSON 日志（业务逻辑：标记为失败）"""
-        from unittest.mock import MagicMock
-
-        from home_application.services.job import batch_get_job_logs
-
         mock_client = MagicMock()
         mock_client.jobv3.batch_get_job_instance_ip_log.return_value = {
             "data": {
@@ -131,10 +125,6 @@ class TestBatchGetJobLogs(TestCase):
 
     def test_parse_mixed_logs(self):
         """测试：解析混合的日志（部分成功，部分失败）"""
-        from unittest.mock import MagicMock
-
-        from home_application.services.job import batch_get_job_logs
-
         mock_client = MagicMock()
         mock_client.jobv3.batch_get_job_instance_ip_log.return_value = {
             "data": {
@@ -162,10 +152,6 @@ class TestBatchGetJobLogs(TestCase):
 
     def test_parse_non_dict_json(self):
         """测试：解析非字典/列表的 JSON（业务逻辑：标记为失败）"""
-        from unittest.mock import MagicMock
-
-        from home_application.services.job import batch_get_job_logs
-
         mock_client = MagicMock()
         mock_client.jobv3.batch_get_job_instance_ip_log.return_value = {
             "data": {
@@ -193,10 +179,6 @@ class TestBatchGetJobLogs(TestCase):
 
     def test_parse_empty_logs(self):
         """测试：解析空日志"""
-        from unittest.mock import MagicMock
-
-        from home_application.services.job import batch_get_job_logs
-
         mock_client = MagicMock()
         mock_client.jobv3.batch_get_job_instance_ip_log.return_value = {
             "data": {

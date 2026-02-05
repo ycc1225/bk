@@ -1,6 +1,7 @@
 import logging
 
 from django.utils.deprecation import MiddlewareMixin
+from opentelemetry.trace import get_current_span
 
 import settings
 
@@ -79,8 +80,6 @@ class TraceIdResponseHeaderMiddleware(MiddlewareMixin):
                 return response
             if getattr(response, "get", None) and response.get("X-Trace-Id"):
                 return response
-
-            from opentelemetry.trace import get_current_span
 
             span = get_current_span()
             span_context = getattr(span, "get_span_context", lambda: None)()

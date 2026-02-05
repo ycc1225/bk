@@ -1,4 +1,5 @@
 import logging
+import time
 
 import redis
 from django.conf import settings
@@ -63,8 +64,6 @@ def fetch_api_counts_and_rename():
 
     # 使用 RENAME 原子性地将当前统计 Key 重命名，以便处理
     # 这样在处理期间的新写入会进入新的 Key
-    import time
-
     temp_key = f"{API_STATS_KEY}_processing_{int(time.time())}"
     # 如果不存在，则直接返回空数据
     if not client.exists(API_STATS_KEY):

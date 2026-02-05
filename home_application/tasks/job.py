@@ -1,6 +1,7 @@
 import logging
 
 from celery import shared_task
+from django.db import transaction
 
 from blueking.component import client as component_client
 from config import APP_CODE, SECRET_KEY
@@ -114,8 +115,6 @@ def process_backup_results(fetch_logs_result):
     业务任务：处理备份作业结果
     保存所有记录（成功/失败）用于排查，使用 bulk_create 优化性能
     """
-    from django.db import transaction
-
     job_instance_id = fetch_logs_result.get("job_instance_id")
     is_job_success = fetch_logs_result.get("is_job_success")
     results = fetch_logs_result.get("results", [])

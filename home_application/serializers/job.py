@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from rest_framework import serializers
 
 from home_application.constants import (
@@ -42,24 +44,18 @@ class BackupJobSubmitSerializer(serializers.Serializer):
 
     def validate_suffix(self, value):
         """验证文件后缀是否合法"""
-        from home_application.constants import ALLOW_FILE_SUFFIX
-
         if value not in ALLOW_FILE_SUFFIX:
             raise serializers.ValidationError(f"文件后缀不合法，允许的后缀：{', '.join(ALLOW_FILE_SUFFIX)}")
         return value
 
     def validate_search_path(self, value):
         """验证搜索路径是否合法"""
-        from home_application.constants import ALLOW_PATH_PREFIX
-
         if not value.startswith(tuple(ALLOW_PATH_PREFIX)) or ".." in value:
             raise serializers.ValidationError("搜索路径不合法，不能包含 '..' 且必须以允许的路径前缀开头")
         return value
 
     def validate_backup_path(self, value):
         """验证备份路径是否合法"""
-        from home_application.constants import ALLOW_PATH_PREFIX
-
         if not value.startswith(tuple(ALLOW_PATH_PREFIX)) or ".." in value:
             raise serializers.ValidationError("备份路径不合法，不能包含 '..' 且必须以允许的路径前缀开头")
         return value
@@ -114,8 +110,6 @@ class BackupJobDetailSerializer(serializers.ModelSerializer):
 
     def get_host_files(self, obj: BackupJob) -> dict:
         """按主机ID分组返回备份记录，利用查询结果有序性优化，最多MAX_HOST_COUNT个主机，单主机最多MAX_FILE_COUNT条"""
-        from collections import defaultdict
-
         host_files = defaultdict(list)
         current_host = None
         host_count = 0
