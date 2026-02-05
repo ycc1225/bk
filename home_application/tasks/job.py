@@ -12,7 +12,7 @@ from home_application.constants import (
     WAITING_CODE,
 )
 from home_application.models import BackupJob, BackupRecord
-from home_application.services.job import batch_get_job_logs
+from home_application.utils.job_utils import batch_get_job_logs
 
 logger = logging.getLogger(__name__)
 
