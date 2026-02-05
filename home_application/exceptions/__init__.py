@@ -25,6 +25,7 @@ from .job import (
     JobPermissionError,
     JobStatusError,
     JobTimeoutError,
+    TaskErrorType,
 )
 
 __all__ = [
@@ -38,6 +39,7 @@ __all__ = [
     "JobAPIError",
     "JobNotFoundError",
     "JobPermissionError",
+    "TaskErrorType",  # 任务错误类型枚举
     # CMDB 异常
     "CmdbBaseException",
     "CmdbParameterError",

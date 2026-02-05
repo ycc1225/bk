@@ -1,13 +1,33 @@
 """
 Job 模块异常定义
 
-提供 Job 相关的业务异常类
+提供 Job 相关的业务异常类和错误类型枚举
 """
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import APIException
 
 
+# =============================
+# 任务错误类型枚举
+# =============================
+class TaskErrorType:
+    """
+    任务链错误类型枚举
+
+    用于标识 Celery 任务链中不同阶段的错误类型，
+    便于在最终的业务处理任务中进行分支处理
+    """
+
+    POLL_STATUS_ERROR = "poll_status_error"  # 轮询作业状态失败
+    FETCH_LOGS_ERROR = "fetch_logs_error"  # 获取作业日志失败
+    UPSTREAM_ERROR = "upstream_error"  # 上游任务失败
+    UNKNOWN_ERROR = "unknown_error"  # 未知错误
+
+
+# =============================
+# Job 异常类
+# =============================
 class JobBaseException(APIException):
     """
     Job 模块基础异常
