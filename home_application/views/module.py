@@ -30,8 +30,16 @@ class ModuleInfoViewSet(ReadOnlyModelViewSet):
 
         validated_data = query_serializer.validated_data
 
+        bk_biz_id = validated_data.get("bk_biz_id")
+        bk_set_id = validated_data.get("bk_set_id")
+
+        # 理论上序列化器已经校验了必填字段，但为了防御性编程，再次检查
+        if bk_biz_id is None or bk_set_id is None:
+            raise CmdbParameterError("缺少必需的参数: bk_biz_id 或 bk_set_id")
+
         return ModuleInfo.objects.filter(
-            bk_biz_id=validated_data["bk_biz_id"], bk_set_id=validated_data["bk_set_id"]
+            bk_biz_id=bk_biz_id,
+            bk_set_id=bk_set_id,
         ).order_by("bk_module_id")
 
     def list(self, request, *args, **kwargs):

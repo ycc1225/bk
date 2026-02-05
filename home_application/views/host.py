@@ -35,13 +35,13 @@ class HostListAPIView(APIView):
         client = get_client_by_request(request)
 
         # 计算分页参数
-        page = validated_data["page"]
-        page_size = validated_data["page_size"]
+        page = validated_data.get("page", 1)
+        page_size = validated_data.get("page_size", 10)
         start = (page - 1) * page_size
 
         # 构造基础请求参数
         kwargs = {
-            "bk_biz_id": validated_data["bk_biz_id"],
+            "bk_biz_id": validated_data.get("bk_biz_id"),
             "page": {
                 "start": start,
                 "limit": page_size,
@@ -56,10 +56,10 @@ class HostListAPIView(APIView):
 
         # 添加可选的拓扑参数
         if "bk_set_id" in validated_data:
-            kwargs["bk_set_ids"] = [validated_data["bk_set_id"]]
+            kwargs["bk_set_ids"] = [validated_data.get("bk_set_id")]
 
         if "bk_module_id" in validated_data:
-            kwargs["bk_module_ids"] = [validated_data["bk_module_id"]]
+            kwargs["bk_module_ids"] = [validated_data.get("bk_module_id")]
 
         # 构造主机属性过滤规则
         rules = []
