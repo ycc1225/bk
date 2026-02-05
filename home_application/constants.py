@@ -53,7 +53,7 @@ ALLOW_PATH_PREFIX = ["/project"]
 ALLOW_FILE_SUFFIX = ["log", "txt", "csv", "json", "bak"]
 
 # JOB回调URL
-CALLBACK_URL = os.getenv("BACKEND_URL", "") + "api/backup-callback/"
+CALLBACK_URL = os.getenv("BACKEND_URL", "") + "api/job/backup-callback/"
 
 # API端点
 CMDB_BASE_URL = "https://bkapi.ce.bktencent.com/api/bk-cmdb/prod/api/v3"
