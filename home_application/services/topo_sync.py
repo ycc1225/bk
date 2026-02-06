@@ -1,6 +1,7 @@
 # cmdb/services/topo_sync.py
-from concurrent.futures import ThreadPoolExecutor
+import asyncio
 
+from asgiref.sync import sync_to_async
 from django.db import transaction
 
 from home_application.models import BizInfo, ModuleInfo, SetInfo, SyncStatus
@@ -39,8 +40,8 @@ class TopoCMDBSyncService:
 
             add_trace_event("fetched_biz_list", biz_count=biz_count)
 
-            with ThreadPoolExecutor(max_workers=10) as executor:
-                list(executor.map(self.sync_biz_topo, biz_list))
+            # 使用asyncio并发执行
+            asyncio.run(self._async_sync_all(biz_list))
 
             add_trace_event("all_biz_synced")
 
@@ -53,7 +54,13 @@ class TopoCMDBSyncService:
             self.status.mark_success()
             add_trace_event("sync_completed", status="success")
 
-    def sync_biz_topo(self, biz):
+    async def _async_sync_all(self, biz_list):
+        """异步并发同步所有业务"""
+        tasks = [self._async_sync_biz_topo(biz) for biz in biz_list]
+        await asyncio.gather(*tasks)
+
+    async def _async_sync_biz_topo(self, biz):
+        """异步同步单个业务的拓扑"""
         biz_id = biz["bk_biz_id"]
         biz_name = biz.get("bk_biz_name", "unknown")
 
@@ -63,8 +70,10 @@ class TopoCMDBSyncService:
         )
 
         try:
-            topo = self.client.get_topo(biz_id)["data"]
-            self._sync_from_topo(topo[0])
+            # 异步执行HTTP请求（thread_sensitive=False 允许在独立线程中并发执行）
+            topo = await sync_to_async(self.client.get_topo, thread_sensitive=False)(biz_id)
+            # 同步执行数据库操作（thread_sensitive=True 保证稳定性，避免数据库连接池竞争）
+            await sync_to_async(self._sync_from_topo, thread_sensitive=True)(topo["data"][0])
             add_trace_event("biz_synced", biz_id=biz_id, biz_name=biz_name)
         except Exception as e:
             mark_trace_error(e)
