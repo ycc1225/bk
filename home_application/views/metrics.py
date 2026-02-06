@@ -3,8 +3,13 @@
 """
 
 from django.http import HttpResponse
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from prometheus_client import Counter
 from rest_framework.views import APIView
+
+# 使用 prometheus_client 创建指标
+requests_total_omg = Counter(
+    "requests_total_omg", "Total number of HTTP requests", ["api_category", "api_name", "is_error"]  # 标签名称列表
+)
 
 
 class MetricsAPIView(APIView):
@@ -14,5 +19,5 @@ class MetricsAPIView(APIView):
     """
 
     def get(self, request):
-        metrics_data = generate_latest()
-        return HttpResponse(metrics_data, content_type=CONTENT_TYPE_LATEST)
+        requests_total_omg.labels(method=request.method, endpoint=request.path).inc()
+        return HttpResponse("custom_metrics")

@@ -22,5 +22,5 @@ urlpatterns = (
     # JOB 相关 API
     url(r"^job/", include("home_application.job_urls")),
     re_path(r"health/$", HealthCheckAPIView.as_view(), name="health"),
-    re_path(r"metrics/$", MetricsAPIView.as_view(), name="metrics"),
+    re_path(r"custom_metrics/$", MetricsAPIView.as_view(), name="custom_metrics"),
 )
