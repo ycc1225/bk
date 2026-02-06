@@ -1,11 +1,19 @@
 import logging
 
 from django.utils.deprecation import MiddlewareMixin
+from opentelemetry import metrics
 from opentelemetry.trace import get_current_span
 
 import settings
+from home_application.utils.redis_utils import increment_api_count
 
 logger = logging.getLogger(__name__)
+meter = metrics.get_meter_provider().get_meter("server")
+
+requests_total_omg = meter.create_counter(
+    "requests_total_omg",
+    description="Total number of HTTP requests",
+)
 
 
 class RecordUserBehaviorMiddleware(MiddlewareMixin):
@@ -52,9 +60,8 @@ class RecordUserBehaviorMiddleware(MiddlewareMixin):
 
             today = timezone.now().date()
 
-            from home_application.utils.redis_utils import increment_api_count
-
             increment_api_count(api_category, api_name, today, is_error)
+            requests_total_omg.add(1, {"api_category": api_category, "api_name": api_name, "is_error": is_error})
         except Exception as e:
             # 这里即使产生了异常，也应该继续往后执行，因为埋点记录不应该影响用户请求接口，应该是静默的，所以建议学有余力的同学尝试进行异步优化
             logger.exception(f"Unexpected Exception when record user behavior:{e}")
