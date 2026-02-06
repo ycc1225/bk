@@ -1,18 +1,17 @@
 import logging
 
 from django.utils.deprecation import MiddlewareMixin
-from opentelemetry import metrics
 from opentelemetry.trace import get_current_span
+from prometheus_client import Counter
 
 import settings
 from home_application.utils.redis_utils import increment_api_count
 
 logger = logging.getLogger(__name__)
-meter = metrics.get_meter_provider().get_meter("server")
 
-requests_total_omg = meter.create_counter(
-    "requests_total_omg",
-    description="Total number of HTTP requests",
+# 使用 prometheus_client 创建指标
+requests_total_omg = Counter(
+    "requests_total_omg", "Total number of HTTP requests", ["api_category", "api_name", "is_error"]  # 标签名称列表
 )
 
 
@@ -61,7 +60,10 @@ class RecordUserBehaviorMiddleware(MiddlewareMixin):
             today = timezone.now().date()
 
             increment_api_count(api_category, api_name, today, is_error)
-            requests_total_omg.add(1, {"api_category": api_category, "api_name": api_name, "is_error": is_error})
+            # 使用 prometheus_client 上报指标
+            requests_total_omg.labels(
+                api_category=api_category, api_name=api_name, is_error=str(is_error)  # 标签值必须是字符串
+            ).inc()
         except Exception as e:
             # 这里即使产生了异常，也应该继续往后执行，因为埋点记录不应该影响用户请求接口，应该是静默的，所以建议学有余力的同学尝试进行异步优化
             logger.exception(f"Unexpected Exception when record user behavior:{e}")

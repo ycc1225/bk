@@ -14,6 +14,7 @@ from django.conf.urls import include, url
 from django.urls import re_path
 
 from home_application.views.health import HealthCheckAPIView
+from home_application.views.metrics import MetricsAPIView
 
 urlpatterns = (
     # CMDB 相关 API
@@ -21,4 +22,5 @@ urlpatterns = (
     # JOB 相关 API
     url(r"^job/", include("home_application.job_urls")),
     re_path(r"health/$", HealthCheckAPIView.as_view(), name="health"),
+    re_path(r"metrics/$", MetricsAPIView.as_view(), name="metrics"),
 )
