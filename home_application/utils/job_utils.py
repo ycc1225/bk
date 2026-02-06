@@ -7,7 +7,10 @@ Job 相关工具函数
 import json
 import logging
 
+from opentelemetry import trace
+
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 def batch_get_job_logs(client, job_instance_id, step_instance_id, host_id_list, bk_biz_id):
@@ -35,67 +38,105 @@ def batch_get_job_logs(client, job_instance_id, step_instance_id, host_id_list, 
                 ...
             ]
     """
-    results = []
-    try:
-        data = {
-            "bk_scope_type": "biz",
-            "bk_scope_id": bk_biz_id,
-            "job_instance_id": job_instance_id,
-            "step_instance_id": step_instance_id,
-            "host_id_list": host_id_list,
-        }
 
-        response = client.jobv3.batch_get_job_instance_ip_log(**data)
+    with tracer.start_as_current_span(
+        "batch_get_job_logs",
+        attributes={
+            "job.instance_id": str(job_instance_id),
+            "job.step_instance_id": str(step_instance_id),
+            "job.host_count": len(host_id_list),
+            "job.bk_biz_id": bk_biz_id,
+        },
+    ) as parent_span:
+        results = []
 
-        # 调试日志
-        logger.info(
-            f"batch_get_job_instance_ip_log response keys:"
-            f"{response.keys() if isinstance(response, dict) else type(response)}"
-        )
-
-        response_data = response.get("data")
-        logs_list = response_data.get("script_task_logs")
-
-        if logs_list is None:
-            logs_list = []
-
-        for log_item in logs_list:
-            if not isinstance(log_item, dict):
-                continue
-
-            bk_host_id = log_item.get("host_id")
-            log_content = log_item.get("log_content")
-
-            # 严格校验并解析 JSON
-            is_success = False
-            parsed_data = None
-
-            if log_content:
-                try:
-                    parsed = json.loads(log_content)
-                    # 确保解析结果是列表或字典（符合预期的数据结构）
-                    # 防止任务执行失败但返回了非 JSON 数据，比如打印的错误信息
-                    if isinstance(parsed, (list, dict)):
-                        is_success = True
-                        parsed_data = parsed
-                    else:
-                        logger.warning(f"日志内容格式不符合预期: host={bk_host_id}, type={type(parsed)}")
-                except json.JSONDecodeError:
-                    logger.warning(
-                        f"日志内容不是有效的 JSON: host={bk_host_id}, step={job_instance_id}-{step_instance_id}"
-                    )
-
-            results.append(
-                {
-                    "bk_host_id": bk_host_id,
-                    "is_success": is_success,
-                    "log_content": log_content,
-                    "parsed_data": parsed_data,
+        try:
+            # API 调用
+            with tracer.start_as_current_span("batch_get_job_instance_ip_log_api"):
+                data = {
+                    "bk_scope_type": "biz",
+                    "bk_scope_id": bk_biz_id,
+                    "job_instance_id": job_instance_id,
+                    "step_instance_id": step_instance_id,
+                    "host_id_list": host_id_list,
                 }
+
+                response = client.jobv3.batch_get_job_instance_ip_log(**data)
+
+            # 调试日志
+            logger.info(
+                f"batch_get_job_instance_ip_log response keys:"
+                f"{response.keys() if isinstance(response, dict) else type(response)}"
             )
 
-    except Exception as e:
-        logger.error(f"批量获取日志异常: job={job_instance_id}, error={e}")
-        # 返回空列表让上层处理
+            # 数据解析
+            with tracer.start_as_current_span("parse_job_logs") as span:
+                response_data = response.get("data")
+                logs_list = response_data.get("script_task_logs")
 
-    return results
+                if logs_list is None:
+                    logs_list = []
+
+                success_count = 0
+                failed_count = 0
+                json_parse_errors = 0
+                total_log_size = 0
+
+                for log_item in logs_list:
+                    if not isinstance(log_item, dict):
+                        continue
+
+                    bk_host_id = log_item.get("host_id")
+                    log_content = log_item.get("log_content")
+
+                    if log_content:
+                        total_log_size += len(log_content)
+
+                    # 严格校验并解析 JSON
+                    is_success = False
+                    parsed_data = None
+
+                    if log_content:
+                        try:
+                            parsed = json.loads(log_content)
+                            # 确保解析结果是列表或字典（符合预期的数据结构）
+                            # 防止任务执行失败但返回了非 JSON 数据，比如打印的错误信息
+                            if isinstance(parsed, (list, dict)):
+                                is_success = True
+                                parsed_data = parsed
+                                success_count += 1
+                            else:
+                                logger.warning(f"日志内容格式不符合预期: host={bk_host_id}, type={type(parsed)}")
+                                failed_count += 1
+                        except json.JSONDecodeError:
+                            logger.warning(
+                                f"日志内容不是有效的 JSON: host={bk_host_id}, step={job_instance_id}-{step_instance_id}"
+                            )
+                            json_parse_errors += 1
+                            failed_count += 1
+
+                    results.append(
+                        {
+                            "bk_host_id": bk_host_id,
+                            "is_success": is_success,
+                            "log_content": log_content,
+                            "parsed_data": parsed_data,
+                        }
+                    )
+
+                span.set_attribute("job.success_count", success_count)
+                span.set_attribute("job.failed_count", failed_count)
+                span.set_attribute("job.json_parse_errors", json_parse_errors)
+                span.set_attribute("job.total_log_size_bytes", total_log_size)
+
+            parent_span.set_attribute("job.total_results", len(results))
+            parent_span.set_attribute("job.success_count", success_count)
+            parent_span.set_attribute("job.failed_count", failed_count)
+
+        except Exception as e:
+            parent_span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
+            parent_span.record_exception(e)
+            logger.error(f"批量获取日志异常: job={job_instance_id}, error={e}")
+            # 返回空列表让上层处理
+
+        return results

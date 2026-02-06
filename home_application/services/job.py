@@ -2,6 +2,7 @@ import logging
 import time
 
 from celery import chain
+from opentelemetry import trace
 
 from home_application.constants import (
     BK_JOB_HOST,
@@ -25,19 +26,13 @@ from home_application.tasks.job import (
 from home_application.utils.job_utils import batch_get_job_logs
 
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 class JobExecutionService:
-    """Job 执行服务，封装与 Job 平台交互的业务逻辑"""
+    """Job 执行服务"""
 
     def __init__(self, client, bk_biz_id: int):
-        """
-        初始化服务
-
-        Args:
-            client: ESB Client 实例
-            bk_biz_id: 业务 ID
-        """
         self.client = client
         self.bk_biz_id = bk_biz_id
 
@@ -48,99 +43,160 @@ class JobExecutionService:
         suffix: str,
         plan_id: int,
     ) -> list[dict]:
-        """
-        执行文件搜索作业（同步等待结果）
+        """执行文件搜索作业（同步等待结果）"""
+        with tracer.start_as_current_span(
+            "execute_search_file",
+            attributes={
+                "job.host_count": len(host_id_list),
+                "job.search_path": search_path,
+                "job.suffix": suffix,
+                "job.plan_id": plan_id,
+            },
+        ) as parent_span:
+            job_instance_id = None
 
-        Args:
-            host_id_list: 主机 ID 列表
-            search_path: 搜索路径
-            suffix: 文件后缀
-            plan_id: 作业计划 ID
-
-        Returns:
-            dict: 包含每个主机的搜索结果
-
-        Raises:
-            JobExecutionError: 作业执行失败
-            JobTimeoutError: 作业执行超时
-            JobStatusError: 作业状态异常
-        """
-        # 1. 执行作业计划
-        kwargs = {
-            "bk_scope_type": "biz",
-            "bk_scope_id": self.bk_biz_id,
-            "job_plan_id": plan_id,
-            "global_var_list": [
-                {
-                    "name": "host_list",
-                    "server": {
-                        "host_id_list": host_id_list,
+            try:
+                with tracer.start_as_current_span(
+                    "execute_job_plan",
+                    attributes={
+                        "job.bk_biz_id": self.bk_biz_id,
+                        "job.plan_id": plan_id,
                     },
-                },
-                {"name": "search_path", "value": search_path},
-                {"name": "suffix", "value": suffix},
-            ],
-        }
+                ) as span:
+                    kwargs = {
+                        "bk_scope_type": "biz",
+                        "bk_scope_id": self.bk_biz_id,
+                        "job_plan_id": plan_id,
+                        "global_var_list": [
+                            {
+                                "name": "host_list",
+                                "server": {
+                                    "host_id_list": host_id_list,
+                                },
+                            },
+                            {"name": "search_path", "value": search_path},
+                            {"name": "suffix", "value": suffix},
+                        ],
+                    }
 
-        response = self.client.jobv3.execute_job_plan(**kwargs)
-        job_instance_id = response.get("data", {}).get("job_instance_id")
+                    response = self.client.jobv3.execute_job_plan(**kwargs)
+                    job_instance_id = response.get("data", {}).get("job_instance_id")
 
-        if not job_instance_id:
-            raise JobExecutionError("执行作业失败，未返回 job_instance_id")
+                    span.set_attribute("job.instance_id", str(job_instance_id))
 
-        # 2. 轮询作业状态
-        kwargs = {
-            "bk_scope_type": "biz",
-            "bk_scope_id": self.bk_biz_id,
-            "job_instance_id": job_instance_id,
-        }
+                    if not job_instance_id:
+                        span.set_status(trace.Status(trace.StatusCode.ERROR, "未返回 job_instance_id"))
+                        raise JobExecutionError("执行作业失败，未返回 job_instance_id")
 
-        attempts = 0
-        step_instance_list = None
+                parent_span.set_attribute("job.instance_id", str(job_instance_id))
 
-        while attempts < MAX_ATTEMPTS:
-            status_response = self.client.jobv3.get_job_instance_status(**kwargs)
-            step_instance_list = status_response.get("data", {}).get("step_instance_list", [])
+                with tracer.start_as_current_span(
+                    "poll_job_status",
+                    attributes={
+                        "job.instance_id": str(job_instance_id),
+                        "job.max_attempts": MAX_ATTEMPTS,
+                    },
+                ) as span:
+                    kwargs = {
+                        "bk_scope_type": "biz",
+                        "bk_scope_id": self.bk_biz_id,
+                        "job_instance_id": job_instance_id,
+                    }
 
-            if not step_instance_list:
-                raise JobStatusError("未获取到步骤实例信息")
+                    attempts = 0
+                    step_instance_list = None
+                    total_api_time = 0
 
-            status_code = step_instance_list[0].get("status")
+                    while attempts < MAX_ATTEMPTS:
+                        api_start = time.time()
+                        status_response = self.client.jobv3.get_job_instance_status(**kwargs)
+                        api_duration = time.time() - api_start
+                        total_api_time += api_duration
 
-            if status_code == WAITING_CODE:
-                time.sleep(JOB_RESULT_ATTEMPTS_INTERVAL)
-                attempts += 1
-            elif status_code in (SUCCESS_CODE, FAILED_CODE):
-                break
-            else:
-                raise JobStatusError(f"作业状态异常: {status_code}")
+                        step_instance_list = status_response.get("data", {}).get("step_instance_list", [])
 
-        if attempts == MAX_ATTEMPTS:
-            raise JobTimeoutError("作业执行超时")
+                        if not step_instance_list:
+                            span.set_status(trace.Status(trace.StatusCode.ERROR, "未获取到步骤实例信息"))
+                            raise JobStatusError("未获取到步骤实例信息")
 
-        step_instance_id = step_instance_list[0].get("step_instance_id")
+                        status_code = step_instance_list[0].get("status")
 
-        # 3. 获取执行日志
-        results = batch_get_job_logs(
-            client=self.client,
-            job_instance_id=job_instance_id,
-            step_instance_id=step_instance_id,
-            host_id_list=host_id_list,
-            bk_biz_id=self.bk_biz_id,
-        )
+                        span.add_event(
+                            f"poll_attempt_{attempts + 1}",
+                            attributes={
+                                "attempt": attempts + 1,
+                                "status_code": status_code,
+                                "api_duration_ms": int(api_duration * 1000),
+                            },
+                        )
 
-        # 4. 格式化返回结果
-        log_list = []
-        for res in results:
-            bk_host_id = res["bk_host_id"]
-            if res["is_success"]:
-                parsed_data = res["parsed_data"]
-            else:
-                parsed_data = {"message": res["log_content"] or "日志内容为空"}
-            parsed_data["bk_host_id"] = bk_host_id
-            log_list.append(parsed_data)
+                        if status_code == WAITING_CODE:
+                            time.sleep(JOB_RESULT_ATTEMPTS_INTERVAL)
+                            attempts += 1
+                        elif status_code in (SUCCESS_CODE, FAILED_CODE):
+                            break
+                        else:
+                            span.set_status(trace.Status(trace.StatusCode.ERROR, f"作业状态异常: {status_code}"))
+                            raise JobStatusError(f"作业状态异常: {status_code}")
 
-        return log_list
+                    if attempts == MAX_ATTEMPTS:
+                        span.set_status(trace.Status(trace.StatusCode.ERROR, "作业执行超时"))
+                        raise JobTimeoutError("作业执行超时")
+
+                    sleep_time = attempts * JOB_RESULT_ATTEMPTS_INTERVAL * 1000
+
+                    span.set_attribute("job.poll_attempts", attempts + 1)
+                    span.set_attribute("job.final_status", status_code)
+                    span.set_attribute("job.poll_api_time_ms", int(total_api_time * 1000))
+                    span.set_attribute("job.poll_sleep_time_ms", sleep_time)
+
+                step_instance_id = step_instance_list[0].get("step_instance_id")
+
+                with tracer.start_as_current_span(
+                    "fetch_job_logs",
+                    attributes={
+                        "job.instance_id": str(job_instance_id),
+                        "job.step_instance_id": str(step_instance_id),
+                        "job.host_count": len(host_id_list),
+                    },
+                ):
+                    results = batch_get_job_logs(
+                        client=self.client,
+                        job_instance_id=job_instance_id,
+                        step_instance_id=step_instance_id,
+                        host_id_list=host_id_list,
+                        bk_biz_id=self.bk_biz_id,
+                    )
+
+                with tracer.start_as_current_span("format_results") as span:
+                    log_list = []
+                    success_count = 0
+                    failed_count = 0
+
+                    for res in results:
+                        bk_host_id = res["bk_host_id"]
+                        if res["is_success"]:
+                            parsed_data = res["parsed_data"]
+                            success_count += 1
+                        else:
+                            parsed_data = {"message": res["log_content"] or "日志内容为空"}
+                            failed_count += 1
+                        parsed_data["bk_host_id"] = bk_host_id
+                        log_list.append(parsed_data)
+
+                    span.set_attribute("job.success_hosts", success_count)
+                    span.set_attribute("job.failed_hosts", failed_count)
+
+                parent_span.set_attribute("job.total_hosts", len(host_id_list))
+                parent_span.set_attribute("job.success_hosts", success_count)
+                parent_span.set_attribute("job.failed_hosts", failed_count)
+
+                return log_list
+
+            except Exception as e:
+                parent_span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
+                parent_span.record_exception(e)
+                raise
 
     def execute_backup_file(
         self,
@@ -151,23 +207,7 @@ class JobExecutionService:
         plan_id: int,
         callback_url: str,
     ) -> tuple[str, str] | None:
-        """
-        执行文件备份作业（异步，不等待结果）
-
-        Args:
-            host_id_list: 主机 ID 列表
-            search_path: 搜索路径
-            suffix: 文件后缀
-            backup_path: 备份路径
-            plan_id: 作业计划 ID
-            callback_url: 回调 URL
-
-        Returns:
-            tuple: (job_instance_id, bk_job_link)
-
-        Raises:
-            JobExecutionError: 作业执行失败
-        """
+        """执行文件备份作业（异步，不等待结果）"""
         kwargs = {
             "bk_scope_type": "biz",
             "bk_scope_id": self.bk_biz_id,
@@ -193,7 +233,6 @@ class JobExecutionService:
             if not job_instance_id:
                 raise JobExecutionError("执行作业失败，未返回 job_instance_id")
 
-            # 生成作业链接
             bk_job_link = f"{BK_JOB_HOST}/biz/{self.bk_biz_id}/execute/task/{job_instance_id}"
 
             return str(job_instance_id), bk_job_link
@@ -205,7 +244,7 @@ class JobExecutionService:
 
 
 class BackupJobService:
-    """备份作业服务，封装备份作业的业务逻辑"""
+    """备份作业服务"""
 
     @staticmethod
     def create_backup_job(
@@ -217,21 +256,6 @@ class BackupJobService:
         bk_job_link: str,
         host_count: int,
     ) -> BackupJob:
-        """
-        创建备份作业记录
-
-        Args:
-            job_instance_id: 作业实例 ID
-            operator: 操作人
-            search_path: 搜索路径
-            suffix: 文件后缀
-            backup_path: 备份路径
-            bk_job_link: 作业链接
-            host_count: 主机数量
-
-        Returns:
-            BackupJob: 创建的备份作业实例
-        """
         return BackupJob.objects.create(
             job_instance_id=job_instance_id,
             operator=operator,
@@ -251,15 +275,7 @@ class BackupJobService:
         bk_biz_id: int,
         bk_token: str,
     ):
-        """
-        启动异步任务链处理备份作业
-
-        Args:
-            job_instance_id: 作业实例 ID
-            host_id_list: 主机 ID 列表
-            bk_biz_id: 业务 ID
-            bk_token: 用户 token
-        """
+        """启动异步任务链处理备份作业"""
         try:
             chain(
                 poll_job_status.s(

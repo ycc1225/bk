@@ -19,10 +19,17 @@ API_AUTH_HEADER = {"X-Bkapi-Authorization": json.dumps(_auth_info)}
 # =============================
 
 # 作业执行结果查询的最大轮询次数
+# 配合 retry_backoff=0.5 和 retry_backoff_max=10，可支持最长 55 秒的作业
+# 适用于 90% 作业在 1-2 秒内完成的场景
 MAX_ATTEMPTS = 10
 
-# 调用作业执行结果api的轮询间隔
-JOB_RESULT_ATTEMPTS_INTERVAL = 0.2
+# 轮询间隔基数（秒）
+# 实际间隔会指数增长:1s, 2s, 4s, 8s, 10s(max), 10s, ...
+JOB_RESULT_ATTEMPTS_INTERVAL = 1
+
+# 轮询最大间隔（秒）
+# 限制指数退避的最大间隔时间，避免等待过久
+JOB_RETRY_BACKOFF_MAX = 10
 
 # JOB作业平台HOST
 BK_JOB_HOST = os.getenv("BKPAAS_JOB_URL")
