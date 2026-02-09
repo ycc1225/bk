@@ -28,6 +28,13 @@ from .job import (
     TaskErrorType,
 )
 
+# 权限模块异常
+from .permission import (
+    PermissionBaseException,
+    RoleParameterError,
+    RolePermissionDenied,
+)
+
 __all__ = [
     # Job 异常
     "JobBaseException",
@@ -44,6 +51,10 @@ __all__ = [
     "CmdbBaseException",
     "CmdbParameterError",
     "CmdbExecutionError",
+    # 权限模块异常
+    "PermissionBaseException",
+    "RolePermissionDenied",
+    "RoleParameterError",
     # 异常处理器
     "custom_exception_handler",
 ]

@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from home_application.constants import ROLE_ADMIN, ROLE_BOT, ROLE_DEV, ROLE_OPS
+from home_application.exceptions import RoleParameterError, RolePermissionDenied
 from home_application.models import UserRole
 from home_application.permission import IsOpsOrAbove, get_user_role
 from home_application.serializers.permission import (
@@ -55,16 +56,19 @@ class UserRoleViewSet(ModelViewSet):
 
         # Ops 只能创建 dev/bot 角色
         if operator_role == ROLE_OPS and role not in (ROLE_DEV, ROLE_BOT):
-            return Response(
-                {"result": False, "message": "运维（Ops）只能分配开发（Dev）或机器人（Bot）角色。", "data": None},
-                status=status.HTTP_403_FORBIDDEN,
+            raise RolePermissionDenied(
+                "运维（Ops）只能分配开发（Dev）或机器人（Bot）角色。",
+                operator=operator,
+                target_user=username,
+                target_role=role,
             )
 
         # 检查用户是否已存在
         if UserRole.objects.filter(username=username).exists():
-            return Response(
-                {"result": False, "message": f"用户 {username} 已存在角色记录，请使用更新接口。", "data": None},
-                status=status.HTTP_400_BAD_REQUEST,
+            raise RoleParameterError(
+                f"用户 {username} 已存在角色记录，请使用更新接口。",
+                operator=operator,
+                target_user=username,
             )
 
         user_role = UserRole.objects.create(username=username, role=role)
@@ -100,20 +104,20 @@ class UserRoleViewSet(ModelViewSet):
 
         # Ops 不可修改已经是 Admin/Ops 的用户
         if operator_role == ROLE_OPS and old_role in (ROLE_ADMIN, ROLE_OPS):
-            return Response(
-                {
-                    "result": False,
-                    "message": "运维（Ops）无权修改管理员（Admin）或运维（Ops）用户的角色。",
-                    "data": None,
-                },
-                status=status.HTTP_403_FORBIDDEN,
+            raise RolePermissionDenied(
+                "运维（Ops）无权修改管理员（Admin）或运维（Ops）用户的角色。",
+                operator=operator,
+                target_user=instance.username,
+                old_role=old_role,
             )
 
         # Ops 只能将目标用户设为 dev/bot
         if operator_role == ROLE_OPS and new_role not in (ROLE_DEV, ROLE_BOT):
-            return Response(
-                {"result": False, "message": "运维（Ops）只能将用户角色设为开发（Dev）或机器人（Bot）。", "data": None},
-                status=status.HTTP_403_FORBIDDEN,
+            raise RolePermissionDenied(
+                "运维（Ops）只能将用户角色设为开发（Dev）或机器人（Bot）。",
+                operator=operator,
+                target_user=instance.username,
+                target_role=new_role,
             )
 
         instance.role = new_role
@@ -137,13 +141,11 @@ class UserRoleViewSet(ModelViewSet):
 
         # Ops 仅可删除 Dev/Bot 角色记录
         if operator_role == ROLE_OPS and instance.role in (ROLE_ADMIN, ROLE_OPS):
-            return Response(
-                {
-                    "result": False,
-                    "message": "运维（Ops）无权删除管理员（Admin）或运维（Ops）用户的角色记录。",
-                    "data": None,
-                },
-                status=status.HTTP_403_FORBIDDEN,
+            raise RolePermissionDenied(
+                "运维（Ops）无权删除管理员（Admin）或运维（Ops）用户的角色记录。",
+                operator=operator,
+                target_user=instance.username,
+                target_role=instance.role,
             )
 
         logger.info(
