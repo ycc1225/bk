@@ -48,6 +48,6 @@ opentelemetry-proto==1.21.0
 opentelemetry-sdk==1.21.0
 opentelemetry-semantic-conventions==0.42b0
 opentelemetry-util-http==0.42b0
-prometheus-client==0.24.1
 pymysql==1.1.1
 pre-commit==4.5.1
+prometheus-client==0.21.1

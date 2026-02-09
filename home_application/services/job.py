@@ -24,6 +24,11 @@ from home_application.tasks.job import (
     process_backup_results,
 )
 from home_application.utils.job_utils import batch_get_job_logs
+from home_application.utils.tracing import (
+    add_trace_attrs,
+    add_trace_event,
+    mark_trace_error,
+)
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
@@ -52,7 +57,7 @@ class JobExecutionService:
                 "job.suffix": suffix,
                 "job.plan_id": plan_id,
             },
-        ) as parent_span:
+        ):
             job_instance_id = None
 
             try:
@@ -62,7 +67,7 @@ class JobExecutionService:
                         "job.bk_biz_id": self.bk_biz_id,
                         "job.plan_id": plan_id,
                     },
-                ) as span:
+                ):
                     kwargs = {
                         "bk_scope_type": "biz",
                         "bk_scope_id": self.bk_biz_id,
@@ -82,13 +87,14 @@ class JobExecutionService:
                     response = self.client.jobv3.execute_job_plan(**kwargs)
                     job_instance_id = response.get("data", {}).get("job_instance_id")
 
-                    span.set_attribute("job.instance_id", str(job_instance_id))
+                    add_trace_attrs(job_instance_id=job_instance_id)
 
                     if not job_instance_id:
-                        span.set_status(trace.Status(trace.StatusCode.ERROR, "未返回 job_instance_id"))
-                        raise JobExecutionError("执行作业失败，未返回 job_instance_id")
+                        error = JobExecutionError("执行作业失败，未返回 job_instance_id")
+                        mark_trace_error(error)
+                        raise error
 
-                parent_span.set_attribute("job.instance_id", str(job_instance_id))
+                add_trace_attrs(job_instance_id=job_instance_id)
 
                 with tracer.start_as_current_span(
                     "poll_job_status",
@@ -96,7 +102,7 @@ class JobExecutionService:
                         "job.instance_id": str(job_instance_id),
                         "job.max_attempts": MAX_ATTEMPTS,
                     },
-                ) as span:
+                ):
                     kwargs = {
                         "bk_scope_type": "biz",
                         "bk_scope_id": self.bk_biz_id,
@@ -116,18 +122,17 @@ class JobExecutionService:
                         step_instance_list = status_response.get("data", {}).get("step_instance_list", [])
 
                         if not step_instance_list:
-                            span.set_status(trace.Status(trace.StatusCode.ERROR, "未获取到步骤实例信息"))
-                            raise JobStatusError("未获取到步骤实例信息")
+                            error = JobStatusError("未获取到步骤实例信息")
+                            mark_trace_error(error)
+                            raise error
 
                         status_code = step_instance_list[0].get("status")
 
-                        span.add_event(
+                        add_trace_event(
                             f"poll_attempt_{attempts + 1}",
-                            attributes={
-                                "attempt": attempts + 1,
-                                "status_code": status_code,
-                                "api_duration_ms": int(api_duration * 1000),
-                            },
+                            attempt=attempts + 1,
+                            status_code=status_code,
+                            api_duration_ms=int(api_duration * 1000),
                         )
 
                         if status_code == WAITING_CODE:
@@ -136,19 +141,23 @@ class JobExecutionService:
                         elif status_code in (SUCCESS_CODE, FAILED_CODE):
                             break
                         else:
-                            span.set_status(trace.Status(trace.StatusCode.ERROR, f"作业状态异常: {status_code}"))
-                            raise JobStatusError(f"作业状态异常: {status_code}")
+                            error = JobStatusError(f"作业状态异常: {status_code}")
+                            mark_trace_error(error)
+                            raise error
 
                     if attempts == MAX_ATTEMPTS:
-                        span.set_status(trace.Status(trace.StatusCode.ERROR, "作业执行超时"))
-                        raise JobTimeoutError("作业执行超时")
+                        error = JobTimeoutError("作业执行超时")
+                        mark_trace_error(error)
+                        raise error
 
                     sleep_time = attempts * JOB_RESULT_ATTEMPTS_INTERVAL * 1000
 
-                    span.set_attribute("job.poll_attempts", attempts + 1)
-                    span.set_attribute("job.final_status", status_code)
-                    span.set_attribute("job.poll_api_time_ms", int(total_api_time * 1000))
-                    span.set_attribute("job.poll_sleep_time_ms", sleep_time)
+                    add_trace_attrs(
+                        job_poll_attempts=attempts + 1,
+                        job_final_status=status_code,
+                        job_poll_api_time_ms=int(total_api_time * 1000),
+                        job_poll_sleep_time_ms=sleep_time,
+                    )
 
                 step_instance_id = step_instance_list[0].get("step_instance_id")
 
@@ -168,7 +177,7 @@ class JobExecutionService:
                         bk_biz_id=self.bk_biz_id,
                     )
 
-                with tracer.start_as_current_span("format_results") as span:
+                with tracer.start_as_current_span("format_results"):
                     log_list = []
                     success_count = 0
                     failed_count = 0
@@ -184,18 +193,21 @@ class JobExecutionService:
                         parsed_data["bk_host_id"] = bk_host_id
                         log_list.append(parsed_data)
 
-                    span.set_attribute("job.success_hosts", success_count)
-                    span.set_attribute("job.failed_hosts", failed_count)
+                    add_trace_attrs(
+                        job_success_hosts=success_count,
+                        job_failed_hosts=failed_count,
+                    )
 
-                parent_span.set_attribute("job.total_hosts", len(host_id_list))
-                parent_span.set_attribute("job.success_hosts", success_count)
-                parent_span.set_attribute("job.failed_hosts", failed_count)
+                add_trace_attrs(
+                    job_total_hosts=len(host_id_list),
+                    job_success_hosts=success_count,
+                    job_failed_hosts=failed_count,
+                )
 
                 return log_list
 
             except Exception as e:
-                parent_span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
-                parent_span.record_exception(e)
+                mark_trace_error(e)
                 raise
 
     def execute_backup_file(

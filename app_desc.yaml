@@ -4,27 +4,17 @@ module:
   spec:
     processes:
       - name: web
-        procCommand: gunicorn wsgi -w 4 -b [::]:5000 --access-logfile - --error-logfile - --access-logformat '[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"' --env prometheus_multiproc_dir=/tmp/
+        procCommand: gunicorn wsgi -w 1 --threads 8 -b [::]:5000 --access-logfile - --error-logfile - --access-logformat '[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"'
         services:
           - name: web
             exposedType:
               name: bk/http
             targetPort: 5000
             port: 80
-          - name: metrics
-            targetPort: 5001
-            port: 5001
       - name: beat
         procCommand: python manage.py celery beat -l info
       - name: worker
-        procCommand: python manage.py celery worker -l info
+        procCommand: python manage.py celery worker -l info --pool=solo --concurrency=1
     hooks:
       preRelease:
         procCommand: "python manage.py migrate --no-input"
-    observability:
-      monitoring:
-        # metrics 采集配置，注意 serviceName 要与 processes 中定义的保持一致
-        metrics:
-          - process: web
-            serviceName: metrics
-            path: /metrics/
