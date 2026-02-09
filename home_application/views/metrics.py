@@ -3,7 +3,7 @@
 """
 
 from blueapps.account.decorators import login_exempt
-from django.http import HttpResponse
+from django_prometheus import exports
 from prometheus_client import Counter
 from rest_framework.views import APIView
 
@@ -20,4 +20,4 @@ class MetricsAPIView(APIView):
     @login_exempt
     def get(self, request):
         requests_total_omg.labels(method=request.method, endpoint=request.path).inc()
-        return HttpResponse("custom_metrics")
+        return exports.ExportToDjangoView(request)
