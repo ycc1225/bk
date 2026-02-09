@@ -98,3 +98,44 @@ DATA_CONFIGS = {
         "defaults_map": {"bk_module_name": "bk_module_name", "bk_set_id": "bk_set_id", "bk_biz_id": "bk_biz_id"},
     },
 }
+
+# =============================
+# 角色常量与层级体系
+# =============================
+
+# 角色枚举值
+ROLE_ADMIN = "admin"
+ROLE_OPS = "ops"
+ROLE_DEV = "dev"
+ROLE_BOT = "bot"
+
+ROLE_CHOICES = (
+    (ROLE_ADMIN, "管理员"),
+    (ROLE_OPS, "运维"),
+    (ROLE_DEV, "开发"),
+    (ROLE_BOT, "机器人"),
+)
+
+# 所有有效角色值集合
+VALID_ROLES = {ROLE_ADMIN, ROLE_OPS, ROLE_DEV, ROLE_BOT}
+
+# 角色层级数值映射（数值越大，权限越高）
+# Bot 与 Dev 同级（均为10），但逻辑上独立区分
+ROLE_LEVEL = {
+    ROLE_ADMIN: 100,
+    ROLE_OPS: 50,
+    ROLE_DEV: 10,
+    ROLE_BOT: 10,
+}
+
+
+def get_role_level(role):
+    """获取角色的层级数值，用于权限比较。
+
+    Args:
+        role: 角色字符串，如 'admin'、'ops'、'dev'、'bot'
+
+    Returns:
+        int: 角色对应的层级数值，未知角色返回 0
+    """
+    return ROLE_LEVEL.get(role, 0)

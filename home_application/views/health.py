@@ -1,5 +1,6 @@
 from celery import current_app
 from django.db import connection
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -8,6 +9,9 @@ from home_application.utils.redis_utils import get_redis_client
 
 class HealthCheckAPIView(APIView):
     """健康检查端点"""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []  # 健康检查接口豁免认证
 
     def get(self, request):
         checks = {

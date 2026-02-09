@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 
 from blueking.component.shortcuts import get_client_by_request
 from home_application.exceptions.cmdb import CmdbExecutionError, CmdbParameterError
+from home_application.permission import IsDevOrAbove
 from home_application.serializers.cmdb import (
     HostDetailQuerySerializer,
     HostListQuerySerializer,
@@ -23,6 +24,8 @@ class HostListAPIView(APIView):
         page (int, 可选): 页码，默认1
         page_size (int, 可选): 每页数量，默认10，最大100
     """
+
+    permission_classes = [IsDevOrAbove]
 
     def get(self, request):
         """根据查询条件返回主机列表"""
@@ -101,6 +104,8 @@ class HostDetailAPIView(APIView):
     查询参数：
         bk_host_id (int, 必填): 主机ID
     """
+
+    permission_classes = [IsDevOrAbove]
 
     def get(self, request):
         """根据主机ID返回主机详情信息"""

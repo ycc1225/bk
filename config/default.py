@@ -158,6 +158,9 @@ LANGUAGES = (
 # DRF 配置
 REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "home_application.exceptions.exception_handler.custom_exception_handler",
+    "DEFAULT_PERMISSION_CLASSES": [
+        "home_application.permission.IsDevOrAbove",
+    ],
 }
 
 """

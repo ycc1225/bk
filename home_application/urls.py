@@ -12,15 +12,23 @@ specific language governing permissions and limitations under the License.
 
 from django.conf.urls import include, url
 from django.urls import re_path
+from rest_framework.routers import DefaultRouter
 
 from home_application.views.health import HealthCheckAPIView
 from home_application.views.metrics import MetricsAPIView
+from home_application.views.user_role import UserRoleViewSet
+
+# 注册用户角色管理路由
+permission_router = DefaultRouter()
+permission_router.register(r"user-roles", UserRoleViewSet, basename="user-role")
 
 urlpatterns = (
     # CMDB 相关 API
     url(r"^cmdb/", include("home_application.cmdb_urls")),
     # JOB 相关 API
     url(r"^job/", include("home_application.job_urls")),
+    # 权限管理相关 API
+    url(r"^permission/", include(permission_router.urls)),
     re_path(r"health/$", HealthCheckAPIView.as_view(), name="health"),
     re_path(r"metrics/$", MetricsAPIView.as_view(), name="metrics"),
 )

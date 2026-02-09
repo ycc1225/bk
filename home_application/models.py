@@ -166,3 +166,28 @@ class ApiRequestCount(models.Model):
 
     def __str__(self):
         return f"{self.date}-{self.api_category}-{self.api_name}"
+
+
+class UserRole(models.Model):
+    """
+    用户角色映射表，用于 RBAC 权限控制
+    """
+
+    ROLE_CHOICES = (
+        ("admin", "管理员"),
+        ("ops", "运维"),
+        ("dev", "开发"),
+        ("bot", "机器人"),
+    )
+
+    username = models.CharField(verbose_name="用户名", max_length=128, unique=True, db_index=True)
+    role = models.CharField(verbose_name="角色", max_length=16, choices=ROLE_CHOICES)
+    created_at = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
+    updated_at = models.DateTimeField(verbose_name="更新时间", auto_now=True)
+
+    class Meta:
+        verbose_name = "用户角色"
+        verbose_name_plural = "用户角色"
+
+    def __str__(self):
+        return f"{self.username} - {self.get_role_display()}"

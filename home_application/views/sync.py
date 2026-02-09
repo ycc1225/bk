@@ -3,11 +3,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from home_application.models import SyncStatus
+from home_application.permission import IsDevOrAbove, IsOpsOrAbove
 from home_application.serializers.common import SyncStatusSerializer
 from home_application.tasks.cmdb_sync import basic_sync_data_task, topo_sync_data_task
 
 
 class BasicSyncAPIView(APIView):
+    permission_classes = [IsOpsOrAbove]
+
     def get(self, request):
         token = request.COOKIES.get("bk_token")
         if not token:
@@ -30,6 +33,8 @@ class BasicSyncAPIView(APIView):
 
 
 class TopoSyncAPIView(APIView):
+    permission_classes = [IsOpsOrAbove]
+
     def get(self, request):
         token = request.COOKIES.get("bk_token")
         if not token:
@@ -51,6 +56,8 @@ class TopoSyncAPIView(APIView):
 
 
 class SyncStatusAPIView(APIView):
+    permission_classes = [IsDevOrAbove]
+
     def get(self, request):
         instance = SyncStatus.objects.last()
         if instance:

@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from home_application.models import BackupJob
+from home_application.permission import IsDevOrAbove
 from home_application.serializers.job import (
     BackupJobDetailSerializer,
     BackupJobListSerializer,
@@ -11,6 +12,8 @@ from home_application.serializers.job import (
 
 class BackupJobListAPIView(APIView):
     """备份作业列表API"""
+
+    permission_classes = [IsDevOrAbove]
 
     def get(self, request):
         """获取备份作业列表"""
@@ -36,6 +39,8 @@ class BackupJobListAPIView(APIView):
 
 class BackupJobDetailAPIView(APIView):
     """备份作业详情API"""
+
+    permission_classes = [IsDevOrAbove]
 
     def get(self, request, pk):
         """获取备份作业详情"""

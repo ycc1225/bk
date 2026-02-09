@@ -2,6 +2,7 @@ import json
 
 from blueapps.utils import ok_data
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -16,6 +17,7 @@ from home_application.constants import (
 )
 from home_application.exceptions.job import JobParameterError
 from home_application.models import BackupJob
+from home_application.permission import IsDevOrAbove, IsOpsOrAbove
 from home_application.serializers.job import (
     BackupJobSubmitSerializer,
     SearchFileSubmitSerializer,
@@ -25,6 +27,8 @@ from home_application.services.job import BackupJobService, JobExecutionService
 
 class SearchFileAPIView(APIView):
     """搜索文件API"""
+
+    permission_classes = [IsDevOrAbove]
 
     def get(self, request):
         """根据主机IP、文件目录和文件后缀查询文件"""
@@ -75,6 +79,8 @@ class BackupFileAPIView(APIView):
     返回：
         job_instance_id: 作业实例ID，可用于查询作业状态
     """
+
+    permission_classes = [IsOpsOrAbove]
 
     def post(self, request):
         """备份文件到指定目录（异步处理）"""
@@ -130,6 +136,9 @@ class BackupJobCallbackAPIView(APIView):
 
     JOB平台会在作业完成时调用此接口，更新作业状态
     """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []  # 回调接口豁免认证
 
     def post(self, request):
         """处理JOB平台的回调通知"""

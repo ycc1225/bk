@@ -11,3 +11,15 @@ specific language governing permissions and limitations under the License.
 """
 
 # Register your models here.
+
+from django.contrib import admin
+
+from home_application.models import UserRole
+
+
+@admin.register(UserRole)
+class UserRoleAdmin(admin.ModelAdmin):
+    list_display = ("username", "role", "created_at", "updated_at")
+    list_filter = ("role",)
+    search_fields = ("username",)
+    readonly_fields = ("created_at", "updated_at")

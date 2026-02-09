@@ -4,6 +4,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from home_application.exceptions.cmdb import CmdbParameterError
 from home_application.models import SetInfo
+from home_application.permission import IsDevOrAbove
 from home_application.serializers.cmdb import SetInfoQuerySerializer, SetInfoSerializer
 
 
@@ -16,6 +17,7 @@ class SetInfoViewSet(ReadOnlyModelViewSet):
     """
 
     serializer_class = SetInfoSerializer
+    permission_classes = [IsDevOrAbove]
 
     def get_queryset(self):
         """根据业务ID过滤集群信息"""
