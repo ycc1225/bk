@@ -2,13 +2,18 @@ import logging
 
 from blueapps.utils import ok_data
 from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from home_application.constants import ROLE_ADMIN, ROLE_BOT, ROLE_DEV, ROLE_OPS
 from home_application.exceptions import RoleParameterError, RolePermissionDenied
 from home_application.models import UserRole
-from home_application.permission import IsOpsOrAbove, get_user_role
+from home_application.permission import (
+    IsAuthenticatedWithRole,
+    IsOpsOrAbove,
+    get_user_role,
+)
 from home_application.serializers.permission import (
     UserRoleCreateUpdateSerializer,
     UserRoleSerializer,
@@ -22,6 +27,7 @@ class UserRoleViewSet(ModelViewSet):
     用户角色管理视图集
 
     权限规则：
+    - current_role: 任何已认证用户可查询自己的角色
     - list: Admin 和 Ops 可查看所有用户角色列表
     - create: Admin 可创建任意角色；Ops 仅可创建 dev/bot 角色
     - update/partial_update: Admin 可修改任意角色；Ops 不可修改 Admin/Ops 用户，且只能设为 dev/bot
@@ -43,6 +49,34 @@ class UserRoleViewSet(ModelViewSet):
         queryset = self.get_queryset()
         serializer = UserRoleSerializer(queryset, many=True)
         return Response(ok_data(data={"roles": serializer.data}))
+
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticatedWithRole], url_path="current-role")
+    def current_role(self, request):
+        """查询当前登录用户的角色
+
+        任何已认证用户均可调用，仅返回自己的角色信息。
+        """
+        username = request.user.username
+        role = get_user_role(request)
+
+        try:
+            instance = UserRole.objects.get(username=username)
+            serializer = UserRoleSerializer(instance)
+            return Response(ok_data(data=serializer.data))
+        except UserRole.DoesNotExist:
+            # superuser/staff 用户可能不在 UserRole 表中，直接构造返回
+            return Response(
+                ok_data(
+                    data={
+                        "id": None,
+                        "username": username,
+                        "role": role,
+                        "role_display": dict(UserRole.ROLE_CHOICES).get(role, role),
+                        "created_at": None,
+                        "updated_at": None,
+                    }
+                )
+            )
 
     def create(self, request, *args, **kwargs):
         """创建用户角色"""
