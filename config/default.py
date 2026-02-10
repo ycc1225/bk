@@ -123,6 +123,29 @@ CELERYD_CONCURRENCY = os.getenv("BK_CELERYD_CONCURRENCY", 2)  # noqa
 # CELERY 配置，申明任务的文件路径，即包含有 @task 装饰器的函数文件
 CELERY_IMPORTS = ("home_application.tasks",)
 
+# --- 数据库连接池配置 ---
+# CONN_MAX_AGE: 连接复用时间（秒），避免频繁创建/销毁连接
+# 设为 300 秒（5分钟），比默认 0（每次关闭）节省连接开销
+DATABASES = locals().get("DATABASES", {})
+for _db_key in DATABASES:
+    DATABASES[_db_key]["CONN_MAX_AGE"] = int(os.getenv("DB_CONN_MAX_AGE", 300))
+
+# --- Celery Worker 优化 ---
+# 任务执行完才确认，子进程 OOM 被杀时任务会重新投递
+CELERY_ACKS_LATE = True
+# 每次预取 1 个任务，配合 -O fair 均匀分配
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+# 任务结果 12 小时后过期，减少存储开销
+CELERY_RESULT_EXPIRES = 43200
+# 任务超时保护
+CELERY_TASK_SOFT_TIME_LIMIT = 600  # 10 分钟软超时
+CELERY_TASK_TIME_LIMIT = 900  # 15 分钟硬超时
+# Broker 可见性超时，需大于最长任务执行时间
+BROKER_TRANSPORT_OPTIONS = {
+    **locals().get("BROKER_TRANSPORT_OPTIONS", {}),
+    "visibility_timeout": 3600,
+}
+
 # log level setting
 LOG_LEVEL = "INFO"
 

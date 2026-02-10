@@ -4,7 +4,14 @@ module:
   spec:
     processes:
       - name: web
-        procCommand: gunicorn wsgi -w 1 --threads 8 -b [::]:5000 --access-logfile - --error-logfile - --access-logformat '[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"'
+        # -w 2: 2个worker进程，充分利用2核CPU，且任一worker崩溃不影响服务
+        # --threads 2: 每个worker 2个线程，处理I/O密集的API请求（总并发: 2×2=4）
+        # -k gthread: 使用线程模式worker class，比sync更适合I/O密集
+        # --timeout 300: 请求超时5分钟（某些CMDB同步接口响应慢）
+        # --graceful-timeout 30: 优雅关闭等待30秒
+        # --max-requests 1000: 每个worker处理1000个请求后自动重启，防止内存泄漏
+        # --max-requests-jitter 50: 抖动值，避免所有worker同时重启
+        procCommand: gunicorn wsgi -w 2 --threads 2 -k gthread --timeout 300 --graceful-timeout 30 --max-requests 800 --max-requests-jitter 50 -b [::]:5000 --access-logfile - --error-logfile - --access-logformat '[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"'
         services:
           - name: web
             exposedType:
@@ -17,7 +24,15 @@ module:
       - name: beat
         procCommand: python manage.py celery beat -l info
       - name: worker
-        procCommand: python manage.py celery worker -l info --pool=solo --concurrency=1
+        # --pool=prefork: 使用进程池，每个子进程独立的内存空间和DB连接，彻底解决asyncio+solo的DB连接冲突
+        # --concurrency=2: 2个子进程，I/O密集型任务可以超配CPU核数
+        # --max-tasks-per-child=200: 每个子进程执行200个任务后回收重建，防止内存泄漏
+        # --max-memory-per-child=200000: 单个子进程内存超过200MB时回收（KB单位）
+        # -O fair: 公平调度，避免单个子进程堆积任务
+        # --without-heartbeat: 减少不必要的心跳开销
+        # --without-gossip: 单worker节点不需要gossip协议
+        # --without-mingle: 启动时不需要与其他worker同步
+        procCommand: python manage.py celery worker -l info --pool=prefork --concurrency=2 --max-tasks-per-child=100 --max-memory-per-child=150000 -O fair --without-heartbeat --without-gossip --without-mingle
     hooks:
       preRelease:
         procCommand: "python manage.py migrate --no-input"
