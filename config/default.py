@@ -146,6 +146,14 @@ BROKER_TRANSPORT_OPTIONS = {
     "visibility_timeout": 3600,
 }
 
+# --- Prometheus 指标 Push 上报配置 ---
+# 蓝鲸监控自定义指标上报端点
+BK_MONITOR_PUSH_ENDPOINT = os.getenv("BK_MONITOR_PUSH_ENDPOINT", "")
+# 蓝鲸监控自定义指标上报 Token（在监控平台 -> 集成 -> 自定义指标中获取）
+BK_MONITOR_PUSH_TOKEN = os.getenv("BK_MONITOR_PUSH_TOKEN", "")
+# 推送 job 标识名
+BK_MONITOR_PUSH_JOB = os.getenv("BK_MONITOR_PUSH_JOB", "job_backupend")
+
 # log level setting
 LOG_LEVEL = "INFO"
 

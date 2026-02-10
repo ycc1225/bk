@@ -18,9 +18,6 @@ module:
               name: bk/http
             targetPort: 5000
             port: 80
-          - name: metrics
-            targetPort: 5001
-            port: 5001
       - name: beat
         procCommand: python manage.py celery beat -l info
       - name: worker
@@ -36,10 +33,3 @@ module:
     hooks:
       preRelease:
         procCommand: "python manage.py migrate --no-input"
-    observability:
-      monitoring:
-        # metrics 采集配置，注意 serviceName 要与 processes 中定义的保持一致
-        metrics:
-          - process: web
-            serviceName: metrics
-            path: /api/metrics/
