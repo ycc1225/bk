@@ -8,6 +8,7 @@ from home_application.utils.redis_utils import (
     delete_redis_key,
     fetch_api_counts_and_rename,
 )
+from home_application.views.metrics import celery_tasks_total
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,7 @@ def sync_api_counts_task():
             if temp_key:
                 delete_redis_key(temp_key)
 
+            celery_tasks_total.labels(task_name="sync_api_counts", status="success").inc()
             logger.info(f"Successfully synced {count} api request records from redis")
             return f"Synced {count} records"
 
@@ -68,9 +70,11 @@ def sync_api_counts_task():
             # 1. 无论如何都删除（可能会丢数据）
             # 2. 保留（可能会内存泄漏）
             # 这里选择保留并 Log Error，以便排查。
+            celery_tasks_total.labels(task_name="sync_api_counts", status="failure").inc()
             logger.error(f"Failed to sync api counts to DB: {e}. Redis key {temp_key} NOT deleted.")
             return f"Failed: {e}"
 
     except Exception as e:
+        celery_tasks_total.labels(task_name="sync_api_counts", status="failure").inc()
         logger.error(f"Failed to sync api counts: {e}")
         return f"Failed: {e}"

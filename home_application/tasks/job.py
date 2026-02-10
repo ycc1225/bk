@@ -20,6 +20,7 @@ from home_application.utils.tracing import (
     add_trace_event,
     mark_trace_error,
 )
+from home_application.views.metrics import celery_tasks_total, job_execution_status
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +78,9 @@ def poll_job_status(self, job_instance_id, bk_biz_id, bk_token):
         is_success = step_status == SUCCESS_CODE
         add_trace_attrs(job_is_success=is_success)
 
+        # 指标埋点：轮询完成
+        celery_tasks_total.labels(task_name="poll_job_status", status="success").inc()
+
         return {
             "success": True,
             "is_finished": True,
@@ -107,6 +111,9 @@ def poll_job_status(self, job_instance_id, bk_biz_id, bk_token):
                 "countdown": countdown,
             },
         )
+        # 指标埋点：轮询重试（仅在最终重试耗尽时记录失败）
+        if self.request.retries >= self.max_retries:
+            celery_tasks_total.labels(task_name="poll_job_status", status="failure").inc()
         raise self.retry(exc=e, countdown=countdown)
 
 
@@ -168,6 +175,9 @@ def fetch_job_logs(job_status_result, host_id_list, bk_token):
 
         add_trace_attrs(job_results_count=len(results))
 
+        # 指标埋点：日志获取成功
+        celery_tasks_total.labels(task_name="fetch_job_logs", status="success").inc()
+
         return {
             "success": True,
             "is_job_success": True,
@@ -176,6 +186,8 @@ def fetch_job_logs(job_status_result, host_id_list, bk_token):
         }
 
     except Exception as e:
+        # 指标埋点：日志获取失败
+        celery_tasks_total.labels(task_name="fetch_job_logs", status="failure").inc()
         mark_trace_error(e)
         logger.error(
             "[获取日志] 获取作业日志失败",
@@ -266,6 +278,9 @@ def process_backup_results(fetch_logs_result):
             )
 
         mark_trace_error(Exception(error_msg))
+        # 指标埋点：任务失败
+        celery_tasks_total.labels(task_name="process_backup_results", status="failure").inc()
+        job_execution_status.labels(job_name=f"backup_{job_instance_id}").set(0)
         return {"success": False, "error_type": error_type, "error": error_msg}
 
     is_job_success = fetch_logs_result.get("is_job_success")
@@ -283,6 +298,9 @@ def process_backup_results(fetch_logs_result):
             extra={"job_instance_id": job_instance_id},
         )
         add_trace_event("job_marked_failed")
+        # 指标埋点：JOB 执行失败
+        celery_tasks_total.labels(task_name="process_backup_results", status="failure").inc()
+        job_execution_status.labels(job_name=f"backup_{job_instance_id}").set(0)
         return {"success": True, "job_status": "failed"}
 
     records_to_create = []
@@ -354,6 +372,10 @@ def process_backup_results(fetch_logs_result):
             "final_status": backup_job.status,
         },
     )
+
+    # 指标埋点：任务完成
+    celery_tasks_total.labels(task_name="process_backup_results", status="success").inc()
+    job_execution_status.labels(job_name=f"backup_{job_instance_id}").set(1 if failed_hosts == 0 else 0)
 
     return {
         "success": True,
