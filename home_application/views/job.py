@@ -105,7 +105,7 @@ class BackupFileAPIView(APIView):
         )
 
         # 使用 Service 层创建备份作业记录
-        BackupJobService.create_backup_job(
+        backup_job = BackupJobService.create_backup_job(
             job_instance_id=job_instance_id,
             operator=request.user.username,
             search_path=validated_data["search_path"],
@@ -126,8 +126,8 @@ class BackupFileAPIView(APIView):
             bk_token=bk_token,
         )
 
-        # 立即返回，不阻塞等待作业完成
-        return Response(ok_data(data="备份作业已提交，正在后台处理"))
+        # 立即返回作业ID，前端可通过 backup-job-detail/{id}/ 轮询状态
+        return Response(ok_data(data={"id": backup_job.id, "job_instance_id": job_instance_id}))
 
 
 class BackupJobCallbackAPIView(APIView):

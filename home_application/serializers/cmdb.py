@@ -65,3 +65,11 @@ class HostDetailQuerySerializer(serializers.Serializer):
     """主机详情查询参数序列化器"""
 
     bk_host_id = serializers.IntegerField(required=True, min_value=1, help_text="主机ID")
+
+
+class TopoSearchQuerySerializer(serializers.Serializer):
+    """拓扑树搜索查询参数序列化器"""
+
+    keyword = serializers.CharField(required=True, min_length=2, max_length=100, help_text="搜索关键字，至少2个字符")
+    page = serializers.IntegerField(required=False, default=1, min_value=1, help_text="页码")
+    page_size = serializers.IntegerField(required=False, default=10, min_value=1, max_value=50, help_text="每页数量")

@@ -7,6 +7,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from home_application.views.sync import SyncStatusAPIView, TopoSyncAPIView
+from home_application.views.topo_search import TopoSearchAPIView
 
 from .views.biz import BizInfoViewSet
 from .views.host import HostDetailAPIView, HostListAPIView
@@ -24,4 +25,5 @@ urlpatterns = (
     url(r"^sync-status/$", SyncStatusAPIView.as_view()),
     url(r"^host-list/$", HostListAPIView.as_view()),
     url(r"^host-detail/$", HostDetailAPIView.as_view()),
+    url(r"^topo-search/$", TopoSearchAPIView.as_view()),
 )
