@@ -135,3 +135,35 @@ class BackupJobDetailSerializer(serializers.ModelSerializer):
                 )
 
         return dict(host_files)
+
+
+class BackupJobQuerySerializer(serializers.Serializer):
+    """备份作业列表查询参数序列化器"""
+
+    status = serializers.ChoiceField(
+        choices=BackupJob.Status.CHOICES,
+        required=False,
+        allow_blank=True,
+        error_messages={"invalid_choice": "无效的状态值，可选值：pending, processing, success, failed, partial"},
+    )
+    operator = serializers.CharField(required=False, allow_blank=True, max_length=255)
+    created_at_start = serializers.DateTimeField(
+        required=False,
+        input_formats=["%Y-%m-%d %H:%M:%S", "%Y-%m-%d"],
+        help_text="起始时间，格式：YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS",
+    )
+    created_at_end = serializers.DateTimeField(
+        required=False,
+        input_formats=["%Y-%m-%d %H:%M:%S", "%Y-%m-%d"],
+        help_text="结束时间，格式：YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS",
+    )
+    page = serializers.IntegerField(required=False, default=1, min_value=1)
+    page_size = serializers.IntegerField(required=False, default=10, min_value=1, max_value=100)
+
+    def validate(self, attrs):
+        """校验时间范围逻辑"""
+        start = attrs.get("created_at_start")
+        end = attrs.get("created_at_end")
+        if start and end and start > end:
+            raise serializers.ValidationError({"created_at_end": "结束时间不能早于起始时间"})
+        return attrs
