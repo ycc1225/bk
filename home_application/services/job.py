@@ -18,6 +18,7 @@ from home_application.exceptions.job import (
     JobTimeoutError,
 )
 from home_application.models import BackupJob
+from home_application.services.diagnosis import DiagnosisService
 from home_application.tasks.job import (
     fetch_job_logs,
     poll_job_status,
@@ -188,7 +189,15 @@ class JobExecutionService:
                             parsed_data = res["parsed_data"]
                             success_count += 1
                         else:
-                            parsed_data = {"message": res["log_content"] or "日志内容为空"}
+                            log_content = res["log_content"] or "日志内容为空"
+                            category, suggestion = DiagnosisService.match_rule(log_content)
+                            parsed_data = {
+                                "message": log_content,
+                                "diagnosis": {
+                                    "category": category,
+                                    "suggestion": suggestion,
+                                },
+                            }
                             failed_count += 1
                         parsed_data["bk_host_id"] = bk_host_id
                         log_list.append(parsed_data)

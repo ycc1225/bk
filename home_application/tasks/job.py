@@ -14,6 +14,7 @@ from home_application.constants import (
 )
 from home_application.exceptions.job import TaskErrorType
 from home_application.models import BackupJob, BackupRecord
+from home_application.services.diagnosis import DiagnosisService
 from home_application.utils.job_utils import batch_get_job_logs
 from home_application.utils.tracing import (
     add_trace_attrs,
@@ -376,6 +377,27 @@ def process_backup_results(fetch_logs_result):
     # 指标埋点：任务完成
     celery_tasks_total.labels(task_name="process_backup_results", status="success").inc()
     job_execution_status.labels(job_name=f"backup_{job_instance_id}").set(1 if failed_hosts == 0 else 0)
+
+    # === 失败诊断（仅在有失败主机时触发，关键词匹配，毫秒级） ===
+    if failed_hosts > 0:
+        try:
+            diagnosis = DiagnosisService().diagnose_backup_job(backup_job)
+            if diagnosis:
+                add_trace_event(
+                    "diagnosis_completed",
+                    top_category=diagnosis.top_category,
+                    failed_hosts=failed_hosts,
+                )
+                logger.info(
+                    "[诊断] 自动诊断完成",
+                    extra={
+                        "job_instance_id": job_instance_id,
+                        "top_category": diagnosis.top_category,
+                    },
+                )
+        except Exception as e:
+            # 诊断失败不影响主流程
+            logger.warning("[诊断] 诊断异常，不影响主流程: %s", str(e))
 
     return {
         "success": True,

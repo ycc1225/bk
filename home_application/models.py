@@ -191,3 +191,34 @@ class UserRole(models.Model):
 
     def __str__(self):
         return f"{self.username} - {self.get_role_display()}"
+
+
+class DiagnosisRecord(models.Model):
+    """备份作业诊断记录（基于关键词规则自动归因）"""
+
+    class FailureCategory(models.TextChoices):
+        PERMISSION_DENIED = "permission_denied", "权限不足"
+        DISK_FULL = "disk_full", "磁盘空间不足"
+        PATH_NOT_FOUND = "path_not_found", "路径不存在"
+        NETWORK_ERROR = "network_error", "网络连接异常"
+        TIMEOUT = "timeout", "执行超时"
+        AGENT_OFFLINE = "agent_offline", "Agent离线"
+        UNKNOWN = "unknown", "未知原因"
+
+    backup_job = models.OneToOneField(BackupJob, on_delete=models.CASCADE, related_name="diagnosis")
+    top_category = models.CharField(
+        max_length=32,
+        choices=FailureCategory.choices,
+        verbose_name="主要失败类型",
+    )
+    summary = models.TextField(verbose_name="诊断摘要")
+    suggestion = models.TextField(verbose_name="修复建议")
+    detail = models.JSONField(default=dict, verbose_name="详细诊断数据")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "诊断记录"
+        verbose_name_plural = "诊断记录"
+
+    def __str__(self):
+        return f"诊断#{self.id} - {self.backup_job.job_instance_id} - {self.get_top_category_display()}"

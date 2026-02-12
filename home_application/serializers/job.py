@@ -89,6 +89,7 @@ class BackupJobDetailSerializer(serializers.ModelSerializer):
 
     created_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
     host_files = serializers.SerializerMethodField()
+    diagnosis = serializers.SerializerMethodField()
 
     class Meta:
         model = BackupJob
@@ -105,8 +106,24 @@ class BackupJobDetailSerializer(serializers.ModelSerializer):
             "file_count",
             "created_at",
             "host_files",
+            "diagnosis",
         ]
         read_only_fields = ["id", "created_at"]
+
+    def get_diagnosis(self, obj: BackupJob) -> dict | None:
+        """返回诊断结果（仅失败/部分成功的作业有值）"""
+        try:
+            diag = obj.diagnosis
+            return {
+                "top_category": diag.top_category,
+                "top_category_display": diag.get_top_category_display(),
+                "summary": diag.summary,
+                "suggestion": diag.suggestion,
+                "detail": diag.detail,
+                "created_at": diag.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+        except Exception:
+            return None
 
     def get_host_files(self, obj: BackupJob) -> dict:
         """按主机ID分组返回备份记录，利用查询结果有序性优化，最多MAX_HOST_COUNT个主机，单主机最多MAX_FILE_COUNT条"""
