@@ -29,6 +29,4 @@ urlpatterns = (
     # 权限管理相关 API
     url(r"^permission/", include(permission_router.urls)),
     re_path(r"health/$", HealthCheckAPIView.as_view(), name="health"),
-    # ChatOps 自然语言运维
-    url(r"^chatops/", include("home_application.chatops_urls")),
 )
