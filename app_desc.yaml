@@ -11,7 +11,7 @@ module:
         # --graceful-timeout 30: 优雅关闭等待30秒
         # --max-requests 1000: 每个worker处理1000个请求后自动重启，防止内存泄漏
         # --max-requests-jitter 50: 抖动值，避免所有worker同时重启
-        procCommand: gunicorn wsgi -w 2 --threads 2 -k gthread --timeout 300 --graceful-timeout 30 --max-requests 800 --max-requests-jitter 50 -b [::]:5000 --access-logfile - --error-logfile - --access-logformat '[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"'
+        procCommand: gunicorn wsgi -w 2 --threads 4 -k gthread --timeout 300 --graceful-timeout 30 --max-requests 800 --max-requests-jitter 50 -b [::]:5000 --access-logfile - --error-logfile - --access-logformat '[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"'
         services:
           - name: web
             exposedType:
@@ -29,7 +29,7 @@ module:
         # --without-heartbeat: 减少不必要的心跳开销
         # --without-gossip: 单worker节点不需要gossip协议
         # --without-mingle: 启动时不需要与其他worker同步
-        procCommand: python manage.py celery worker -l info --pool=prefork --concurrency=2 --max-tasks-per-child=100 --max-memory-per-child=150000 -O fair --without-heartbeat --without-gossip --without-mingle
+        procCommand: python manage.py celery worker -l info --pool=prefork --concurrency=4 --max-tasks-per-child=100 --max-memory-per-child=150000 -O fair --without-heartbeat --without-gossip --without-mingle
     hooks:
       preRelease:
         procCommand: "python manage.py migrate --no-input"
