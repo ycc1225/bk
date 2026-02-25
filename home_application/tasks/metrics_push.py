@@ -10,6 +10,9 @@ from datetime import date
 
 from celery import shared_task
 
+from home_application.models import ApiRequestCount
+from home_application.views.metrics import requests_errors_total, requests_total
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,8 +24,6 @@ def _collect_api_request_metrics():
     由于 Web 进程（Gunicorn）和 Worker 进程（Celery）内存隔离，
     Web 进程中间件记录到 Redis/DB 的数据需要在 Worker 中主动拉取后填充。
     """
-    from home_application.models import ApiRequestCount
-    from home_application.views.metrics import requests_errors_total, requests_total
 
     try:
         today = date.today()

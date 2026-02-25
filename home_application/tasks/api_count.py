@@ -13,7 +13,13 @@ from home_application.views.metrics import celery_tasks_total
 logger = logging.getLogger(__name__)
 
 
-@shared_task
+# at-most-once 保证任务最多执行一次，可能会丢失部分数据
+@shared_task(
+    acks_late=False,
+    reject_on_worker_lost=False,
+    autoretry_for=(),
+    max_retries=0,
+)
 def sync_api_counts_task():
     """
     定时任务：从 Redis 同步 API 计数到数据库
@@ -62,14 +68,6 @@ def sync_api_counts_task():
             return f"Synced {count} records"
 
         except Exception as e:
-            # 如果 DB 更新失败，不删除 temp_key，这样数据保留在 Redis 中（虽然可能会导致下次任务无法处理它，除非有恢复机制）
-            # 但至少数据没丢。我们可以记录日志，或者考虑后续的手动恢复。
-            # 注意：如果不删除，这个 temp_key 会一直占用内存。
-            # 更好的策略可能是：对于部分成功的，我们无法回滚。
-            # 鉴于这是统计数据，我们可以选择：
-            # 1. 无论如何都删除（可能会丢数据）
-            # 2. 保留（可能会内存泄漏）
-            # 这里选择保留并 Log Error，以便排查。
             celery_tasks_total.labels(task_name="sync_api_counts", status="failure").inc()
             logger.error(f"Failed to sync api counts to DB: {e}. Redis key {temp_key} NOT deleted.")
             return f"Failed: {e}"
