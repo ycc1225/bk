@@ -1,3 +1,4 @@
+from blueapps.account.decorators import login_exempt
 from blueapps.utils import ok_data
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
@@ -23,6 +24,7 @@ class BizInfoViewSet(ReadOnlyModelViewSet):
         """返回所有业务信息，按业务ID排序"""
         return BizInfo.objects.all().order_by("bk_biz_id")
 
+    @login_exempt
     def list(self, request, *args, **kwargs):
         """返回业务列表，包装为 {"info": [...]} 格式"""
         queryset = self.get_queryset()
