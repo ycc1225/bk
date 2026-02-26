@@ -59,7 +59,7 @@ def custom_exception_handler(exc, context):
                 "exception_type": exc.__class__.__name__,
                 "exception_module": exc.__class__.__module__,
                 "status_code": response.status_code,
-                "message": message,
+                "error_message": message,
                 "context": extra_context,
                 "request_path": request_path,
                 "request_method": request_method,

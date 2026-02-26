@@ -1,9 +1,10 @@
+from blueapps.account.decorators import login_exempt
 from blueapps.utils import ok_data
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from home_application.models import BizInfo
-from home_application.permission import IsDevOrAbove
 from home_application.serializers.cmdb import BizInfoSerializer
 
 
@@ -15,9 +16,11 @@ class BizInfoViewSet(ReadOnlyModelViewSet):
     """
 
     serializer_class = BizInfoSerializer
-    permission_classes = [IsDevOrAbove]
-    # 如果业务数量很多，可以启用分页：
-    # pagination_class = PageNumberPagination
+    permission_classes = [AllowAny]  # 允许任何人访问
+
+    @login_exempt
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
         """返回所有业务信息，按业务ID排序"""
