@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from home_application.models import BizInfo
-from home_application.permission import IsDevOrAbove
 from home_application.serializers.cmdb import BizInfoSerializer
 
 
@@ -16,7 +15,7 @@ class BizInfoViewSet(ReadOnlyModelViewSet):
     """
 
     serializer_class = BizInfoSerializer
-    permission_classes = [IsDevOrAbove]
+    # permission_classes = [IsDevOrAbove]
     # 如果业务数量很多，可以启用分页：
     # pagination_class = PageNumberPagination
 
