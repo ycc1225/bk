@@ -14,7 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 # at-most-once 保证任务最多执行一次，可能会丢失部分数据
+# queue="default": 轻量级定时任务使用 default 队列
 @shared_task(
+    queue="default",
     acks_late=False,
     reject_on_worker_lost=False,
     autoretry_for=(),

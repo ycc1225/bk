@@ -9,7 +9,7 @@ from home_application.views.metrics import celery_tasks_total, cmdb_sync_last_su
 logger = logging.getLogger(__name__)
 
 
-@shared_task
+@shared_task(queue="sync")
 def basic_sync_data_task(token=None):
     try:
         BasicCMDBSyncService(token).sync()
@@ -21,7 +21,7 @@ def basic_sync_data_task(token=None):
         raise
 
 
-@shared_task
+@shared_task(queue="sync")
 def topo_sync_data_task(token):
     try:
         TopoCMDBSyncService(token).sync()

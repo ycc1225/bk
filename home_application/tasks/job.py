@@ -32,6 +32,7 @@ def get_esb_client(bk_token):
 
 @shared_task(
     bind=True,
+    queue="job",
     max_retries=MAX_ATTEMPTS,
 )
 def poll_job_status(self, job_instance_id, bk_biz_id, bk_token):
@@ -118,7 +119,7 @@ def poll_job_status(self, job_instance_id, bk_biz_id, bk_token):
         raise self.retry(exc=e, countdown=countdown)
 
 
-@shared_task
+@shared_task(queue="job")
 def fetch_job_logs(job_status_result, host_id_list, bk_token):
     """批量获取所有主机的执行日志"""
     job_instance_id = job_status_result.get("job_instance_id")
@@ -208,7 +209,7 @@ def fetch_job_logs(job_status_result, host_id_list, bk_token):
         }
 
 
-@shared_task
+@shared_task(queue="job")
 def process_backup_results(fetch_logs_result):
     """处理备份作业结果，保存所有记录"""
     job_instance_id = fetch_logs_result.get("job_instance_id")

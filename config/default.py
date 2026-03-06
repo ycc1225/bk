@@ -123,6 +123,40 @@ CELERYD_CONCURRENCY = os.getenv("BK_CELERYD_CONCURRENCY", 2)  # noqa
 # CELERY 配置，申明任务的文件路径，即包含有 @task 装饰器的函数文件
 CELERY_IMPORTS = ("home_application.tasks",)
 
+# --- Celery 多队列配置 ---
+# 定义队列：default（轻量级定时任务）、sync（数据同步任务）、job（作业执行任务）
+CELERY_TASK_QUEUES = {
+    "default": {
+        "exchange": "default",
+        "routing_key": "default",
+    },
+    "sync": {
+        "exchange": "sync",
+        "routing_key": "sync",
+    },
+    "job": {
+        "exchange": "job",
+        "routing_key": "job",
+    },
+}
+
+# 任务路由配置：根据任务名称自动分配到对应队列
+CELERY_TASK_ROUTES = {
+    # 轻量级定时任务 -> default 队列
+    "home_application.tasks.api_count.sync_api_counts_task": {"queue": "default"},
+    "home_application.tasks.metrics_push.push_metrics_task": {"queue": "default"},
+    # 数据同步任务 -> sync 队列
+    "home_application.tasks.cmdb_sync.basic_sync_data_task": {"queue": "sync"},
+    "home_application.tasks.cmdb_sync.topo_sync_data_task": {"queue": "sync"},
+    # 作业执行任务 -> job 队列
+    "home_application.tasks.job.poll_job_status": {"queue": "job"},
+    "home_application.tasks.job.fetch_job_logs": {"queue": "job"},
+    "home_application.tasks.job.process_backup_results": {"queue": "job"},
+}
+
+# 默认队列（未匹配路由的任务使用）
+CELERY_TASK_DEFAULT_QUEUE = "default"
+
 # --- 数据库连接池配置 ---
 # CONN_MAX_AGE: 连接复用时间（秒），避免频繁创建/销毁连接
 # 设为 300 秒（5分钟），比默认 0（每次关闭）节省连接开销

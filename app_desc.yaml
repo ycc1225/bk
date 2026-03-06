@@ -20,16 +20,18 @@ module:
             port: 80
       - name: beat
         procCommand: python manage.py celery beat -l info
-      - name: worker
-        # --pool=prefork: 使用进程池，每个子进程独立的内存空间和DB连接，彻底解决asyncio+solo的DB连接冲突
-        # --concurrency=2: 2个子进程，I/O密集型任务可以超配CPU核数
-        # --max-tasks-per-child=200: 每个子进程执行200个任务后回收重建，防止内存泄漏
-        # --max-memory-per-child=200000: 单个子进程内存超过200MB时回收（KB单位）
-        # -O fair: 公平调度，避免单个子进程堆积任务
-        # --without-heartbeat: 减少不必要的心跳开销
-        # --without-gossip: 单worker节点不需要gossip协议
-        # --without-mingle: 启动时不需要与其他worker同步
-        procCommand: python manage.py celery worker -l info --pool=prefork --concurrency=4 --max-tasks-per-child=100 --max-memory-per-child=150000 -O fair --without-heartbeat --without-gossip --without-mingle
+      - name: worker-sync
+        # 消费 default 和 sync 队列：轻量级定时任务 + CMDB数据同步任务
+        # --concurrency=2: I/O密集型任务，2个子进程
+        # --max-tasks-per-child=100: 同步任务较重，及时回收防止内存泄漏
+        # --max-memory-per-child=200000: 同步任务可能处理大量数据，内存限制200MB
+        procCommand: python manage.py celery worker -Q default,sync -l info --pool=prefork --concurrency=2 --max-tasks-per-child=1000 --max-memory-per-child=200000 -O fair --without-heartbeat --without-gossip --without-mingle
+      - name: worker-job
+        # 消费 job 队列：作业执行任务（轮询状态、获取日志、处理结果）
+        # --concurrency=2: I/O密集型任务，2个子进程
+        # --max-tasks-per-child=100: 作业任务较重，及时回收防止内存泄漏
+        # --max-memory-per-child=200000: 作业任务可能处理大量日志数据，内存限制200MB
+        procCommand: python manage.py celery worker -Q job -l info --pool=prefork --concurrency=2 --max-tasks-per-child=200 --max-memory-per-child=200000 -O fair --without-heartbeat --without-gossip --without-mingle
     hooks:
       preRelease:
         procCommand: "python manage.py migrate --no-input"

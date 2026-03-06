@@ -53,7 +53,7 @@ def _collect_api_request_metrics():
         logger.error(f"[指标收集] 拉取 API 请求数据失败: {e}", exc_info=True)
 
 
-@shared_task
+@shared_task(queue="default")
 def push_metrics_task():
     """
     定时推送 Prometheus 指标到蓝鲸监控平台。
